@@ -8,15 +8,14 @@ export default function AdminPage() {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'settings' | 'withdrawals' | 'players'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'players'>('settings');
 
   // Settings state
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
-  // Data states
-  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  // Players state
   const [players, setPlayers] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
 
@@ -35,14 +34,13 @@ export default function AdminPage() {
     getGameSettings().then(setSettings);
   }, []);
 
-  // Fetch data from secure server API when authenticated
+  // Fetch players data from secure server API when authenticated
   const loadAdminData = async () => {
     setIsLoadingData(true);
     try {
       const res = await fetch('/api/admin/data');
       if (res.ok) {
         const data = await res.json();
-        setWithdrawals(data.withdrawals || []);
         setPlayers(data.players || []);
       }
     } catch (err) {
@@ -97,7 +95,8 @@ export default function AdminPage() {
       if (!res.ok) {
         throw new Error(data.error || 'Failed to save settings');
       }
-      setSaveSuccess('✅ Game settings updated successfully in Firestore!');
+      setSaveSuccess('✅ Settings updated successfully!');
+      setTimeout(() => setSaveSuccess(null), 4000);
     } catch (err: any) {
       alert('Error saving settings: ' + err.message);
     } finally {
@@ -136,7 +135,7 @@ export default function AdminPage() {
           <div style={{ fontSize: '32px', marginBottom: '16px' }}>🔐</div>
           <h1
             style={{
-              fontSize: '14px',
+              fontSize: '13px',
               color: '#00ff87',
               letterSpacing: '2px',
               marginBottom: '8px',
@@ -145,7 +144,7 @@ export default function AdminPage() {
             ADMIN COMMAND CONSOLE
           </h1>
           <p style={{ fontSize: '7.5px', color: '#709ca6', marginBottom: '24px', lineHeight: '1.8' }}>
-            Enter authorized master administrator credentials to access the Block Fuel control nexus.
+            Enter administrator credentials to configure minimum balance requirement and leaderboard settings.
           </p>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -239,7 +238,7 @@ export default function AdminPage() {
         color: '#e0f2f1',
       }}
     >
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         {/* Top Header */}
         <div
           style={{
@@ -254,11 +253,11 @@ export default function AdminPage() {
           }}
         >
           <div>
-            <div style={{ fontSize: '14px', color: '#00ff87', fontWeight: 900, letterSpacing: '1px' }}>
+            <div style={{ fontSize: '13px', color: '#00ff87', fontWeight: 900, letterSpacing: '1px' }}>
               ⚙️ BLOCK FUEL ADMIN NEXUS
             </div>
             <div style={{ fontSize: '7.5px', color: '#709ca6', marginTop: '4px' }}>
-              Economics &bull; Withdrawals &bull; Player Accounts &bull; Robinhood Chain
+              Balance Requirements &bull; Leaderboard Settings &bull; Player Rankings
             </div>
           </div>
 
@@ -296,26 +295,30 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* Overview Stats */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
             gap: '12px',
             marginBottom: '20px',
           }}
         >
-          <div style={{ background: 'rgba(10, 20, 24, 0.85)', border: '1px solid rgba(0, 255, 135, 0.3)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '7px', color: '#709ca6', marginBottom: '4px' }}>TOTAL PLAYERS</div>
-            <div style={{ fontSize: '16px', color: '#00ff87', fontWeight: 900 }}>{players.length}</div>
+          <div style={{ background: 'rgba(10, 20, 24, 0.85)', border: '1px solid rgba(0, 255, 135, 0.3)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '7px', color: '#709ca6', marginBottom: '6px' }}>TOTAL REGISTERED PLAYERS</div>
+            <div style={{ fontSize: '18px', color: '#00ff87', fontWeight: 900 }}>{players.length}</div>
           </div>
-          <div style={{ background: 'rgba(10, 20, 24, 0.85)', border: '1px solid rgba(255, 215, 0, 0.3)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '7px', color: '#709ca6', marginBottom: '4px' }}>TOTAL WITHDRAWALS</div>
-            <div style={{ fontSize: '16px', color: '#ffd700', fontWeight: 900 }}>{withdrawals.length}</div>
+          <div style={{ background: 'rgba(10, 20, 24, 0.85)', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '7px', color: '#709ca6', marginBottom: '6px' }}>MINIMUM TOKEN REQUIREMENT</div>
+            <div style={{ fontSize: '18px', color: '#00e5ff', fontWeight: 900 }}>
+              {settings.minTokenRequired > 0 ? `${settings.minTokenRequired.toLocaleString()} Tokens` : '0 (Free Access)'}
+            </div>
           </div>
-          <div style={{ background: 'rgba(10, 20, 24, 0.85)', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '7px', color: '#709ca6', marginBottom: '4px' }}>EXCHANGE RATE</div>
-            <div style={{ fontSize: '16px', color: '#00e5ff', fontWeight: 900 }}>{settings.coinsPerToken} : 1</div>
+          <div style={{ background: 'rgba(10, 20, 24, 0.85)', border: '1px solid rgba(255, 215, 0, 0.3)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '7px', color: '#709ca6', marginBottom: '6px' }}>LEADERBOARD STATUS</div>
+            <div style={{ fontSize: '15px', color: settings.leaderboardEnabled ? '#00ff87' : '#ff7979', fontWeight: 900 }}>
+              {settings.leaderboardEnabled ? '🟢 ACTIVE' : '🔴 DISABLED'}
+            </div>
           </div>
         </div>
 
@@ -337,21 +340,6 @@ export default function AdminPage() {
             ⚙️ GAME SETTINGS
           </button>
           <button
-            onClick={() => setActiveTab('withdrawals')}
-            style={{
-              background: activeTab === 'withdrawals' ? 'rgba(0, 229, 255, 0.2)' : 'transparent',
-              border: activeTab === 'withdrawals' ? '1px solid rgba(0, 229, 255, 0.5)' : '1px solid transparent',
-              color: activeTab === 'withdrawals' ? '#00e5ff' : '#709ca6',
-              padding: '8px 14px',
-              borderRadius: '6px',
-              fontSize: '8px',
-              fontFamily: "'Press Start 2P', monospace",
-              cursor: 'pointer',
-            }}
-          >
-            📋 WITHDRAWALS ({withdrawals.length})
-          </button>
-          <button
             onClick={() => setActiveTab('players')}
             style={{
               background: activeTab === 'players' ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
@@ -364,7 +352,7 @@ export default function AdminPage() {
               cursor: 'pointer',
             }}
           >
-            👥 PLAYERS ({players.length})
+            👥 LEADERBOARD & PLAYERS ({players.length})
           </button>
         </div>
 
@@ -378,144 +366,215 @@ export default function AdminPage() {
               padding: '24px',
             }}
           >
-            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                    MINIMUM TOKEN REQUIREMENT
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.minTokenRequired}
-                    onChange={(e) => setSettings({ ...settings, minTokenRequired: Number(e.target.value) })}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'rgba(6, 15, 19, 0.9)',
-                      border: '1px solid rgba(0, 255, 135, 0.3)',
-                      borderRadius: '6px',
-                      color: '#00ff87',
-                      fontSize: '9px',
-                      fontFamily: "'Press Start 2P', monospace",
-                    }}
-                  />
-                  <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '4px', display: 'block' }}>
-                    Holdings required on Robinhood Chain to play / withdraw (0 = open access)
-                  </span>
+            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* Section: Minimum Balance Requirement */}
+              <div style={{ borderBottom: '1px solid rgba(0, 255, 135, 0.2)', paddingBottom: '20px' }}>
+                <div style={{ fontSize: '10px', color: '#00ff87', marginBottom: '14px', letterSpacing: '1px' }}>
+                  🎯 MINIMUM BALANCE REQUIREMENT
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                    EXCHANGE RATE (COINS PER TOKEN)
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.coinsPerToken}
-                    onChange={(e) => setSettings({ ...settings, coinsPerToken: Number(e.target.value) })}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'rgba(6, 15, 19, 0.9)',
-                      border: '1px solid rgba(0, 255, 135, 0.3)',
-                      borderRadius: '6px',
-                      color: '#00ff87',
-                      fontSize: '9px',
-                      fontFamily: "'Press Start 2P', monospace",
-                    }}
-                  />
-                  <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '4px', display: 'block' }}>
-                    Number of in-game Fuel Coins exchanged per 1 token (e.g. 10 coins = 1 token)
-                  </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                      MINIMUM TOKEN HOLDING TO PLAY
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={settings.minTokenRequired}
+                      onChange={(e) => setSettings({ ...settings, minTokenRequired: Number(e.target.value) })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'rgba(6, 15, 19, 0.9)',
+                        border: '1px solid rgba(0, 255, 135, 0.3)',
+                        borderRadius: '6px',
+                        color: '#00ff87',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                      }}
+                    />
+                    <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '4px', display: 'block' }}>
+                      Required token balance on Robinhood Chain to run (Set 0 for open access).
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                      ROBINHOOD CHAIN ID (EVM)
+                    </label>
+                    <input
+                      type="number"
+                      value={settings.chainId}
+                      onChange={(e) => setSettings({ ...settings, chainId: Number(e.target.value) })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'rgba(6, 15, 19, 0.9)',
+                        border: '1px solid rgba(0, 229, 255, 0.3)',
+                        borderRadius: '6px',
+                        color: '#00e5ff',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                      TOKEN CONTRACT ADDRESS (Robinhood Chain ERC-20)
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.tokenAddress}
+                      onChange={(e) => setSettings({ ...settings, tokenAddress: e.target.value })}
+                      placeholder="0x0000000000000000000000000000000000000000"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'rgba(6, 15, 19, 0.9)',
+                        border: '1px solid rgba(0, 229, 255, 0.3)',
+                        borderRadius: '6px',
+                        color: '#00e5ff',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                      }}
+                    />
+                    <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '4px', display: 'block' }}>
+                      Address of the token contract queried to check player eligibility.
+                    </span>
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                      ROBINHOOD CHAIN RPC ENDPOINT
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.rpcUrl}
+                      onChange={(e) => setSettings({ ...settings, rpcUrl: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'rgba(6, 15, 19, 0.9)',
+                        border: '1px solid rgba(0, 229, 255, 0.3)',
+                        borderRadius: '6px',
+                        color: '#00e5ff',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Leaderboard & Competition Settings */}
+              <div>
+                <div style={{ fontSize: '10px', color: '#ffd700', marginBottom: '14px', letterSpacing: '1px' }}>
+                  🏆 LEADERBOARD & COMPETITION
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                    MINIMUM WITHDRAWAL (COINS)
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.minWithdrawCoins}
-                    onChange={(e) => setSettings({ ...settings, minWithdrawCoins: Number(e.target.value) })}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'rgba(6, 15, 19, 0.9)',
-                      border: '1px solid rgba(0, 255, 135, 0.3)',
-                      borderRadius: '6px',
-                      color: '#00ff87',
-                      fontSize: '9px',
-                      fontFamily: "'Press Start 2P', monospace",
-                    }}
-                  />
-                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                  {/* Leaderboard Enable Switch */}
+                  <div style={{ background: 'rgba(6, 15, 19, 0.7)', border: '1px solid rgba(255, 215, 0, 0.25)', borderRadius: '8px', padding: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#ffd700', marginBottom: '8px' }}>
+                      LEADERBOARD VISIBILITY
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, leaderboardEnabled: !settings.leaderboardEnabled })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: settings.leaderboardEnabled ? 'rgba(0, 255, 135, 0.25)' : 'rgba(255, 56, 56, 0.2)',
+                        border: settings.leaderboardEnabled ? '1px solid #00ff87' : '1px solid #ff5656',
+                        borderRadius: '6px',
+                        color: settings.leaderboardEnabled ? '#00ff87' : '#ff7979',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {settings.leaderboardEnabled ? '✅ LEADERBOARD ENABLED' : '⛔ LEADERBOARD DISABLED'}
+                    </button>
+                    <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '6px', display: 'block' }}>
+                      Controls whether the global leaderboard is active for players.
+                    </span>
+                  </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                    ROBINHOOD CHAIN ID (EVM)
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.chainId}
-                    onChange={(e) => setSettings({ ...settings, chainId: Number(e.target.value) })}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'rgba(6, 15, 19, 0.9)',
-                      border: '1px solid rgba(0, 229, 255, 0.3)',
-                      borderRadius: '6px',
-                      color: '#00e5ff',
-                      fontSize: '9px',
-                      fontFamily: "'Press Start 2P', monospace",
-                    }}
-                  />
-                </div>
+                  {/* Maintenance Mode Switch */}
+                  <div style={{ background: 'rgba(6, 15, 19, 0.7)', border: '1px solid rgba(255, 100, 100, 0.25)', borderRadius: '8px', padding: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#ff7979', marginBottom: '8px' }}>
+                      MAINTENANCE MODE
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, maintenanceMode: !settings.maintenanceMode })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: settings.maintenanceMode ? 'rgba(255, 56, 56, 0.25)' : 'rgba(0, 255, 135, 0.15)',
+                        border: settings.maintenanceMode ? '1px solid #ff5656' : '1px solid rgba(0, 255, 135, 0.4)',
+                        color: settings.maintenanceMode ? '#ff7979' : '#00ff87',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {settings.maintenanceMode ? '⚠️ MAINTENANCE ACTIVE' : '✅ GAME OPERATIONAL'}
+                    </button>
+                    <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '6px', display: 'block' }}>
+                      Put game into maintenance mode if updates are being deployed.
+                    </span>
+                  </div>
 
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                    TOKEN CONTRACT ADDRESS (Robinhood Chain ERC-20)
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.tokenAddress}
-                    onChange={(e) => setSettings({ ...settings, tokenAddress: e.target.value })}
-                    placeholder="0x0000000000000000000000000000000000000000"
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'rgba(6, 15, 19, 0.9)',
-                      border: '1px solid rgba(0, 229, 255, 0.3)',
-                      borderRadius: '6px',
-                      color: '#00e5ff',
-                      fontSize: '9px',
-                      fontFamily: "'Press Start 2P', monospace",
-                    }}
-                  />
-                </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                      COMPETITION START DATE (OPTIONAL)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={settings.startDate || ''}
+                      onChange={(e) => setSettings({ ...settings, startDate: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'rgba(6, 15, 19, 0.9)',
+                        border: '1px solid rgba(255, 215, 0, 0.3)',
+                        borderRadius: '6px',
+                        color: '#ffd700',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                      }}
+                    />
+                  </div>
 
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                    ROBINHOOD CHAIN RPC ENDPOINT
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.rpcUrl}
-                    onChange={(e) => setSettings({ ...settings, rpcUrl: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: 'rgba(6, 15, 19, 0.9)',
-                      border: '1px solid rgba(0, 229, 255, 0.3)',
-                      borderRadius: '6px',
-                      color: '#00e5ff',
-                      fontSize: '9px',
-                      fontFamily: "'Press Start 2P', monospace",
-                    }}
-                  />
+                  <div>
+                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                      COMPETITION END DATE (OPTIONAL)
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={settings.endDate || ''}
+                      onChange={(e) => setSettings({ ...settings, endDate: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: 'rgba(6, 15, 19, 0.9)',
+                        border: '1px solid rgba(255, 215, 0, 0.3)',
+                        borderRadius: '6px',
+                        color: '#ffd700',
+                        fontSize: '9px',
+                        fontFamily: "'Press Start 2P', monospace",
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {saveSuccess && (
-                <div style={{ color: '#00ff87', fontSize: '8px', padding: '8px', background: 'rgba(0,255,135,0.1)', borderRadius: '6px' }}>
+                <div style={{ color: '#00ff87', fontSize: '8px', padding: '10px', background: 'rgba(0,255,135,0.15)', borderRadius: '6px', border: '1px solid #00ff87' }}>
                   {saveSuccess}
                 </div>
               )}
@@ -537,63 +596,13 @@ export default function AdminPage() {
                   alignSelf: 'flex-start',
                 }}
               >
-                {isSaving ? 'SAVING CONFIG...' : 'SAVE SETTINGS TO FIRESTORE'}
+                {isSaving ? 'SAVING SETTINGS...' : 'SAVE SETTINGS'}
               </button>
             </form>
           </div>
         )}
 
-        {/* Tab 2: Withdrawals */}
-        {activeTab === 'withdrawals' && (
-          <div
-            style={{
-              background: 'rgba(10, 20, 24, 0.9)',
-              border: '1px solid rgba(0, 229, 255, 0.35)',
-              borderRadius: '10px',
-              padding: '20px',
-            }}
-          >
-            <div style={{ fontSize: '9px', color: '#00e5ff', marginBottom: '12px' }}>
-              ALL WITHDRAWAL RECORDS ({withdrawals.length})
-            </div>
-            {withdrawals.length === 0 ? (
-              <div style={{ fontSize: '8px', color: '#709ca6', padding: '16px', textAlign: 'center' }}>
-                No withdrawal records recorded.
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', fontSize: '7.5px', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ color: '#709ca6', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>USER ADDRESS</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>COINS</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>TOKENS PAID</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>STATUS</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>TX HASH</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {withdrawals.map((w) => (
-                      <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '8px', color: '#00e5ff' }}>
-                          {w.userAddress ? `${w.userAddress.slice(0, 6)}...${w.userAddress.slice(-4)}` : 'N/A'}
-                        </td>
-                        <td style={{ padding: '8px', color: '#ffd700' }}>⚡ {w.amountCoins}</td>
-                        <td style={{ padding: '8px', color: '#00ff87' }}>{w.tokensPaid}</td>
-                        <td style={{ padding: '8px', color: '#00e5ff' }}>{w.status?.toUpperCase() || 'COMPLETED'}</td>
-                        <td style={{ padding: '8px', color: '#709ca6' }}>
-                          {w.txHash ? `${w.txHash.slice(0, 10)}...` : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: Players */}
+        {/* Tab 2: Players / Leaderboard */}
         {activeTab === 'players' && (
           <div
             style={{
@@ -604,11 +613,11 @@ export default function AdminPage() {
             }}
           >
             <div style={{ fontSize: '9px', color: '#ffd700', marginBottom: '12px' }}>
-              REGISTERED PLAYER PROFILES ({players.length})
+              GLOBAL PLAYER LEADERBOARD ({players.length} PLAYERS)
             </div>
             {players.length === 0 ? (
               <div style={{ fontSize: '8px', color: '#709ca6', padding: '16px', textAlign: 'center' }}>
-                No player profiles stored in Firestore yet.
+                No players recorded yet.
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -619,14 +628,13 @@ export default function AdminPage() {
                       <th style={{ padding: '8px', textAlign: 'left' }}>WALLET ADDRESS</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>HIGH SCORE</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>BANKED COINS</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>TOTAL WITHDRAWN</th>
                     </tr>
                   </thead>
                   <tbody>
                     {players.map((p, idx) => (
                       <tr key={p.id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '8px', color: idx === 0 ? '#ffd700' : idx === 1 ? '#00e5ff' : '#709ca6' }}>
-                          #{idx + 1}
+                        <td style={{ padding: '8px', color: idx === 0 ? '#ffd700' : idx === 1 ? '#00e5ff' : '#709ca6', fontWeight: 'bold' }}>
+                          #{idx + 1} {idx === 0 ? '👑' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''}
                         </td>
                         <td style={{ padding: '8px', color: '#00e5ff' }}>
                           {p.address ? `${p.address.slice(0, 6)}...${p.address.slice(-4)}` : p.id}
@@ -636,9 +644,6 @@ export default function AdminPage() {
                         </td>
                         <td style={{ padding: '8px', color: '#ffd700' }}>
                           ⚡ {p.totalCoins?.toLocaleString() || 0}
-                        </td>
-                        <td style={{ padding: '8px', color: '#709ca6' }}>
-                          {p.totalWithdrawn?.toLocaleString() || 0}
                         </td>
                       </tr>
                     ))}
