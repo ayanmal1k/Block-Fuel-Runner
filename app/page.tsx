@@ -190,14 +190,18 @@ export default function BlockFuelPunchAndRun() {
   const [bgParticles, setBgParticles] = useState<React.ReactNode[]>([]);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
-  const toggleFullscreen = async () => {
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-      try { await (screen.orientation as any)?.lock?.("landscape"); } catch { }
-    } else {
-      await document.exitFullscreen();
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        try { await (screen.orientation as any)?.lock?.("landscape"); } catch { }
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.warn("Fullscreen toggle failed:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const check = () => setIsPortrait(window.innerHeight > window.innerWidth);
@@ -365,8 +369,14 @@ export default function BlockFuelPunchAndRun() {
   /* ── keyboard handlers ── */
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      keys.current[e.key.toLowerCase()] = true;
-      if (["arrowup", "arrowdown", " "].includes(e.key.toLowerCase())) {
+      const k = e.key.toLowerCase();
+      if (k === "f") {
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+      keys.current[k] = true;
+      if (["arrowup", "arrowdown", " "].includes(k)) {
         e.preventDefault();
       }
     };
@@ -379,7 +389,7 @@ export default function BlockFuelPunchAndRun() {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, []);
+  }, [toggleFullscreen]);
 
   /* ── mouse click handler for punch ── */
   useEffect(() => {
@@ -1102,6 +1112,9 @@ export default function BlockFuelPunchAndRun() {
   /* ── start / restart on key press ── */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "f") {
+        return;
+      }
       if (gameState === "idle" || gameState === "dead") {
         e.preventDefault();
         resetGame();
@@ -1174,7 +1187,7 @@ export default function BlockFuelPunchAndRun() {
               boxShadow: "0 0 20px rgba(0, 255, 135, 0.4)",
             }}
           >
-            ENTER FULLSCREEN
+            ENTER FULLSCREEN (F)
           </button>
         </div>
       )}
@@ -1251,7 +1264,6 @@ export default function BlockFuelPunchAndRun() {
       <button
         onClick={toggleFullscreen}
         style={{
-          display: isFullscreen ? "none" : "block",
           position: "absolute",
           top: "16px",
           right: "16px",
@@ -1268,7 +1280,7 @@ export default function BlockFuelPunchAndRun() {
           transition: "all 0.2s ease",
         }}
       >
-        {isFullscreen ? "✕ EXIT" : "⛶ FULLSCREEN"}
+        {isFullscreen ? "✕ EXIT (F)" : "⛶ FULLSCREEN (F)"}
       </button>
 
       {/* Canvas Wrapper with Holographic Cyber Border */}
