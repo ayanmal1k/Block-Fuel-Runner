@@ -25,28 +25,28 @@ const PUNCH_FW = PUNCH_SHEET_W / PUNCH_FRAMES; // 256
 const PUNCH_FH = PUNCH_SHEET_H;                // 256
 
 const AERO_FRAMES = 2;
-const AERO_SHEET_W = 687;
-const AERO_SHEET_H = 269;
-const AERO_FW = AERO_SHEET_W / AERO_FRAMES;
-const AERO_FH = AERO_SHEET_H;
+const AERO_SHEET_W = 486;
+const AERO_SHEET_H = 256;
+const AERO_FW = AERO_SHEET_W / AERO_FRAMES; // 243
+const AERO_FH = AERO_SHEET_H;              // 256
 const AERO_DRAW_W = 75;
-const AERO_DRAW_H = 59;
+const AERO_DRAW_H = 75;
 
 const HOLLOW_FRAMES = 2;
-const HOLLOW_SHEET_W = 687;
-const HOLLOW_SHEET_H = 269;
-const HOLLOW_FW = HOLLOW_SHEET_W / HOLLOW_FRAMES;
-const HOLLOW_FH = HOLLOW_SHEET_H;
+const HOLLOW_SHEET_W = 522;
+const HOLLOW_SHEET_H = 256;
+const HOLLOW_FW = HOLLOW_SHEET_W / HOLLOW_FRAMES; // 261
+const HOLLOW_FH = HOLLOW_SHEET_H;                // 256
 const HOLLOW_DRAW_W = 100;
 const HOLLOW_DRAW_H = 100;
 
 const MITE_FRAMES = 2;
-const MITE_SHEET_W = 2691;
-const MITE_SHEET_H = 1056;
-const MITE_FW = MITE_SHEET_W / MITE_FRAMES;
-const MITE_FH = MITE_SHEET_H;
-const MITE_DRAW_W = 50;
-const MITE_DRAW_H = 50;
+const MITE_SHEET_W = 512;
+const MITE_SHEET_H = 256;
+const MITE_FW = MITE_SHEET_W / MITE_FRAMES; // 256
+const MITE_FH = MITE_SHEET_H;              // 256
+const MITE_DRAW_W = 55;
+const MITE_DRAW_H = 55;
 
 /* ───────── game constants ───────── */
 const CANVAS_W = 900;
@@ -71,15 +71,15 @@ const PUNCH_DURATION = 18;                 // frames the punch lasts
 const DODGE_SCORE = 1;                     // points for dodging
 const PUNCH_SCORE = 2;                     // points for punching an obstacle
 
-const BULLET_W = 30;
-const BULLET_H = 10;
+const BULLET_W = 40;
+const BULLET_H = 14;
 const BULLET_SPEED = 7;
 const BULLET_SHOT_MIN = 80;                // min frames between shots
 const BULLET_SHOT_MAX = 200;               // max frames between shots
 const NANO_JAB_DAMAGE = 25;
 
-const COIN_W = 20;
-const COIN_H = 20;
+const COIN_W = 28;
+const COIN_H = 28;
 const COIN_SPAWN_MIN = 160;                 // min frames between coin spawns
 const COIN_SPAWN_MAX = 300;
 
@@ -170,43 +170,7 @@ function spawnDestroyParticles(ob: Obstacle, particles: Particle[]) {
   }
 }
 
-function removeSpriteBackground(img: HTMLImageElement): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  const w = img.naturalWidth || img.width;
-  const h = img.naturalHeight || img.height;
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
-  ctx.drawImage(img, 0, 0);
 
-  const imgData = ctx.getImageData(0, 0, w, h);
-  const data = imgData.data;
-
-  // Sample top-left corner color as background key
-  const bgR = data[0];
-  const bgG = data[1];
-  const bgB = data[2];
-  const toleranceSq = 55 * 55;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-
-    const dr = r - bgR;
-    const dg = g - bgG;
-    const db = b - bgB;
-    const isCornerMatch = (dr * dr + dg * dg + db * db < toleranceSq);
-    const isGreyBg = (Math.abs(r - g) < 18 && Math.abs(g - b) < 18 && Math.abs(r - b) < 18 && r > 115 && r < 195);
-
-    if (isCornerMatch || isGreyBg) {
-      data[i + 3] = 0;
-    }
-  }
-
-  ctx.putImageData(imgData, 0, 0);
-  return canvas;
-}
 
 /* ═══════════════════════════════════════════════════
    COMPONENT
@@ -311,9 +275,9 @@ export default function MannyObstacleRun() {
   const duckImg = useRef<HTMLImageElement | null>(null);
   const punchImg = useRef<HTMLImageElement | null>(null);
   const jumpImg = useRef<HTMLImageElement | null>(null);
-  const aeroJellyImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
-  const hollowImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
-  const miteImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
+  const aeroJellyImg = useRef<HTMLImageElement | null>(null);
+  const hollowImg = useRef<HTMLImageElement | null>(null);
+  const miteImg = useRef<HTMLImageElement | null>(null);
   const bulletImg = useRef<HTMLImageElement | null>(null);
   const nanoImg = useRef<HTMLImageElement | null>(null);
   const coinImg = useRef<HTMLImageElement | null>(null);
@@ -325,15 +289,7 @@ export default function MannyObstacleRun() {
   const coinPreviewRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const cleanImageRef = (src: string, ref: React.MutableRefObject<HTMLCanvasElement | HTMLImageElement | null>) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        ref.current = removeSpriteBackground(img);
-      };
-    };
-
-    const loadImage = (src: string, ref: React.MutableRefObject<HTMLImageElement | HTMLCanvasElement | null>) => {
+    const loadImage = (src: string, ref: React.MutableRefObject<HTMLImageElement | null>) => {
       const img = new Image();
       img.src = src;
       ref.current = img;
@@ -346,8 +302,8 @@ export default function MannyObstacleRun() {
     loadImage("/New%20folder/punch.png", punchImg);
     loadImage("/New%20folder/jump.png", jumpImg);
 
-    cleanImageRef("/aero-jelly.jpg", aeroJellyImg);
-    cleanImageRef("/hollow.jpg", hollowImg);
+    loadImage("/aero-jelly.png", aeroJellyImg);
+    loadImage("/hollow.png", hollowImg);
     loadImage("/mite.png", miteImg);
 
     bgImg.current = new Image();
@@ -384,7 +340,7 @@ export default function MannyObstacleRun() {
         const cx = c.getContext("2d");
         if (!cx) continue;
         if (j.fw > 0) {
-          cx.drawImage(j.img, 20, 20, j.fw - 40, j.fh - 20, 0, 0, c.width, c.height);
+          cx.drawImage(j.img, 0, 0, j.fw, j.fh, 0, 0, c.width, c.height);
         } else {
           cx.drawImage(j.img, 0, 0, c.width, c.height);
         }
@@ -878,7 +834,7 @@ export default function MannyObstacleRun() {
             const oY = GROUND_Y - 100;
             ctx.drawImage(
               aeroJellyImg.current,
-              sx + 20, 20, AERO_FW - 40, AERO_FH - 20,
+              sx, 0, AERO_FW, AERO_FH,
               ob.x, oY, ob.width, ob.height
             );
           }
@@ -889,7 +845,7 @@ export default function MannyObstacleRun() {
             const oY = GROUND_Y - ob.height;
             ctx.drawImage(
               hollowImg.current,
-              sx + 20, 20, HOLLOW_FW - 40, HOLLOW_FH - 20,
+              sx, 0, HOLLOW_FW, HOLLOW_FH,
               ob.x, oY, ob.width, ob.height
             );
           }
@@ -900,7 +856,7 @@ export default function MannyObstacleRun() {
             const oY = GROUND_Y - ob.height;
             ctx.drawImage(
               miteImg.current,
-              sx + 20, 20, MITE_FW - 40, MITE_FH - 20,
+              sx, 0, MITE_FW, MITE_FH,
               ob.x, oY, ob.width, ob.height
             );
           }
@@ -1530,17 +1486,17 @@ export default function MannyObstacleRun() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px" }}>
-          <canvas ref={bulletPreviewRef} width={36} height={12} style={{ imageRendering: "pixelated", borderRadius: "4px", background: "#1a1a2e" }} />
+          <canvas ref={bulletPreviewRef} width={42} height={14} style={{ imageRendering: "pixelated", borderRadius: "4px", background: "#1a1a2e" }} />
           <span>Crystal <span style={{ color: "#e74c3c" }}>-50 HP</span></span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px" }}>
-          <canvas ref={nanoPreviewRef} width={36} height={12} style={{ imageRendering: "pixelated", borderRadius: "4px", background: "#1a1a2e" }} />
+          <canvas ref={nanoPreviewRef} width={42} height={14} style={{ imageRendering: "pixelated", borderRadius: "4px", background: "#1a1a2e" }} />
           <span>Nano Jab <span style={{ color: "#e67e22" }}>-25 HP</span></span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px" }}>
-          <canvas ref={coinPreviewRef} width={20} height={20} style={{ imageRendering: "pixelated", borderRadius: "4px", background: "#1a1a2e" }} />
+          <canvas ref={coinPreviewRef} width={24} height={24} style={{ imageRendering: "pixelated", borderRadius: "4px", background: "#1a1a2e" }} />
           <span>Coin = <span style={{ color: "#ffd700" }}>1 Punch</span></span>
         </div>
       </div>
