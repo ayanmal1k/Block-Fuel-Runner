@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, doc, setDoc, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { GameSettings, DEFAULT_GAME_SETTINGS, getGameSettings } from '@/lib/gameSettings';
 
 export default function AdminPage() {
@@ -37,23 +35,16 @@ export default function AdminPage() {
     getGameSettings().then(setSettings);
   }, []);
 
-  // Fetch data when authenticated
+  // Fetch data from secure server API when authenticated
   const loadAdminData = async () => {
-    if (!db || !db.type) return;
     setIsLoadingData(true);
     try {
-      // Fetch withdrawals
-      const wSnap = await getDocs(collection(db, 'withdrawals'));
-      const wList: any[] = [];
-      wSnap.forEach((d) => wList.push({ id: d.id, ...d.data() }));
-      setWithdrawals(wList.reverse());
-
-      // Fetch users
-      const uSnap = await getDocs(collection(db, 'users'));
-      const uList: any[] = [];
-      uSnap.forEach((d) => uList.push({ id: d.id, ...d.data() }));
-      uList.sort((a, b) => (b.highScore || 0) - (a.highScore || 0));
-      setPlayers(uList);
+      const res = await fetch('/api/admin/data');
+      if (res.ok) {
+        const data = await res.json();
+        setWithdrawals(data.withdrawals || []);
+        setPlayers(data.players || []);
+      }
     } catch (err) {
       console.warn('Admin data load note:', err);
     } finally {

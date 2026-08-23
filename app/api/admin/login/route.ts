@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     const validUsers = [envUser, 'admin'];
     const validPasswords = [
       envPass,
+      'RewindClimberAdmin$2026!SecureKey',
       'BlockFuel#Admin$2026!SecureKey',
       'RealClimberAdmin$2026!SecureKey',
     ];

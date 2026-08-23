@@ -1,8 +1,7 @@
 /**
  * Centralized Game Settings & Economics System (Server & Shared)
  *
- * All parameters are stored in Firestore `settings/game_config` so the
- * Admin can update them dynamically in real-time without redeployment.
+ * Parameters are managed via Firestore `settings/game_config` and Next.js API.
  */
 
 import { db } from '@/lib/firebase';
@@ -23,11 +22,11 @@ export interface GameSettings {
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
-  gameFeeAmount: Number(process.env.GAME_FEE_AMOUNT || process.env.NEXT_PUBLIC_GAME_FEE_AMOUNT || 0),
-  minTokenRequired: Number(process.env.NEXT_PUBLIC_MIN_TOKEN_REQUIRED || process.env.MIN_TOKEN_REQUIRED || 10),
-  coinsPerToken: Number(process.env.NEXT_PUBLIC_COINS_PER_TOKEN || 10),
-  minWithdrawCoins: Number(process.env.NEXT_PUBLIC_MIN_WITHDRAW_COINS || 100),
-  tokenAddress: process.env.NEXT_PUBLIC_TOKEN_CONTRACT_ADDRESS || '0x0000000000000000000000000000000000000000',
+  gameFeeAmount: 0,
+  minTokenRequired: 0,
+  coinsPerToken: 10,
+  minWithdrawCoins: 100,
+  tokenAddress: '0x020bfC650A365f8BB26819deAAbF3E21291018b4',
   chainId: Number(process.env.NEXT_PUBLIC_EVM_CHAIN_ID || 4663),
   rpcUrl: process.env.NEXT_PUBLIC_EVM_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
   leaderboardEnabled: true,
@@ -37,9 +36,28 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
 };
 
 /**
- * Fetch dynamic game settings from Firestore with fallback defaults.
+ * Fetch dynamic game settings with fallback defaults.
+ * Automatically handles client-side API requests and server-side direct Firestore queries.
  */
 export async function getGameSettings(): Promise<GameSettings> {
+  // If running in browser, fetch settings from API route
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/settings');
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          ...DEFAULT_GAME_SETTINGS,
+          ...data,
+        };
+      }
+    } catch {
+      // Fallback to defaults
+    }
+    return DEFAULT_GAME_SETTINGS;
+  }
+
+  // Server-side Firestore access
   try {
     if (!db || !db.type) {
       return DEFAULT_GAME_SETTINGS;

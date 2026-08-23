@@ -5,8 +5,6 @@ import { DynamicContextProvider, useDynamicContext } from '@dynamic-labs/sdk-rea
 import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
 import { fetchEvmTokenBalance, getRobinhoodRpcList } from '@/lib/evmBalance';
 import { getGameSettings, GameSettings, DEFAULT_GAME_SETTINGS } from '@/lib/gameSettings';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
 export interface WalletContextType {
   primaryWallet: { address: string } | null;
@@ -51,7 +49,7 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
   const [nativeAddress, setNativeAddress] = useState<string | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [tokenBalance, setTokenBalance] = useState<number>(0);
-  const [tokenSymbol, setTokenSymbol] = useState<string>('ETH');
+  const [tokenSymbol, setTokenSymbol] = useState<string>('BLKFUEL');
   const [isCheckingBalance, setIsCheckingBalance] = useState<boolean>(false);
   const [bankCoins, setBankCoins] = useState<number>(0);
   const [gameSettings, setGameSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
@@ -116,9 +114,45 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
 
   const effectiveAddress = dynamicWalletAddress || nativeAddress;
 
-  // Fetch dynamic settings from Firestore
+  // Real-time listener for dynamic game settings from Firestore
   useEffect(() => {
-    getGameSettings().then(setGameSettings);
+    if (!db || !db.type) {
+      getGameSettings().then(setGameSettings);
+      return;
+    }
+    try {
+      const configRef = doc(db, 'settings', 'game_config');
+      const unsub = onSnapshot(
+        configRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            setGameSettings({
+              gameFeeAmount: typeof data.gameFeeAmount === 'number' ? data.gameFeeAmount : 0,
+              minTokenRequired: typeof data.minTokenRequired === 'number' ? data.minTokenRequired : 0,
+              coinsPerToken: typeof data.coinsPerToken === 'number' && data.coinsPerToken > 0 ? data.coinsPerToken : 10,
+              minWithdrawCoins: typeof data.minWithdrawCoins === 'number' && data.minWithdrawCoins >= 0 ? data.minWithdrawCoins : 100,
+              tokenAddress: data.tokenAddress || '0x020bfC650A365f8BB26819deAAbF3E21291018b4',
+              chainId: typeof data.chainId === 'number' ? data.chainId : 4663,
+              rpcUrl: data.rpcUrl || 'https://rpc.mainnet.chain.robinhood.com',
+              leaderboardEnabled: data.leaderboardEnabled !== undefined ? Boolean(data.leaderboardEnabled) : true,
+              maintenanceMode: data.maintenanceMode !== undefined ? Boolean(data.maintenanceMode) : false,
+              startDate: data.startDate || '',
+              endDate: data.endDate || '',
+            });
+          } else {
+            getGameSettings().then(setGameSettings);
+          }
+        },
+        (err) => {
+          console.warn('Game settings listener note:', err);
+          getGameSettings().then(setGameSettings);
+        }
+      );
+      return () => unsub();
+    } catch {
+      getGameSettings().then(setGameSettings);
+    }
   }, []);
 
   // Connect native browser fallback with Robinhood Mainnet switch/add
@@ -225,48 +259,31 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
     }
   }, [effectiveAddress, gameSettings.tokenAddress, gameSettings.rpcUrl]);
 
-  // Refresh banked fuel coins from Firestore
+  // Refresh banked fuel coins via secure server API
   const refreshBankCoins = useCallback(async () => {
-    if (!effectiveAddress || !db || !db.type) return;
+    if (!effectiveAddress) return;
     try {
-      const userRef = doc(db, 'users', effectiveAddress.toLowerCase());
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        const data = snap.data();
+      const res = await fetch(`/api/user?address=${encodeURIComponent(effectiveAddress)}`);
+      if (res.ok) {
+        const data = await res.json();
         setBankCoins(Number(data.totalCoins || 0));
-      } else {
-        await setDoc(userRef, {
-          address: effectiveAddress.toLowerCase(),
-          totalCoins: 0,
-          highScore: 0,
-          totalWithdrawn: 0,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-        setBankCoins(0);
       }
     } catch (err) {
-      console.warn('Firestore user fetch note:', err);
+      console.warn('Bank coins fetch note:', err);
     }
   }, [effectiveAddress]);
 
-  // Real-time listener for user banked coins in Firestore
+  // Periodic & event-based update for user balance and banked coins
   useEffect(() => {
-    if (!effectiveAddress || !db || !db.type) return;
+    if (!effectiveAddress) return;
     refetchBalance();
     refreshBankCoins();
 
-    try {
-      const userRef = doc(db, 'users', effectiveAddress.toLowerCase());
-      const unsub = onSnapshot(userRef, (docSnap) => {
-        if (docSnap.exists()) {
-          setBankCoins(Number(docSnap.data().totalCoins || 0));
-        }
-      });
-      return () => unsub();
-    } catch {
-      // Fallback
-    }
+    const interval = setInterval(() => {
+      refreshBankCoins();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [effectiveAddress, refetchBalance, refreshBankCoins]);
 
   const minRequired = gameSettings.minTokenRequired || 0;

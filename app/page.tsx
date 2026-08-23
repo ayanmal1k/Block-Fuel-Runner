@@ -183,6 +183,7 @@ function getRunnerRank(score: number): { rank: string; color: string } {
    ═══════════════════════════════════════════════════ */
 export default function BlockFuelPunchAndRun() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sessionTokenRef = useRef<string | null>(null);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [coinCount, setCoinCount] = useState(0);
@@ -425,7 +426,7 @@ export default function BlockFuelPunchAndRun() {
     return () => canvas.removeEventListener("click", handleClick);
   }, []);
 
-  /* ── record game completion & bank coins in Firestore ── */
+  /* ── record game completion & bank coins via verified HMAC session ── */
   const handleRunEnd = useCallback(
     (finalScore: number, finalCoins: number) => {
       if (finalScore > highScore) {
@@ -434,23 +435,32 @@ export default function BlockFuelPunchAndRun() {
         localStorage.setItem("manny-hi", String(finalScore));
       }
       if (primaryWallet?.address) {
+        const token = sessionTokenRef.current;
+        sessionTokenRef.current = null; // consume token reference locally
+
         fetch("/api/game/end", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            sessionToken: token,
             userAddress: primaryWallet.address,
             score: finalScore,
             coinsCollected: finalCoins,
           }),
         })
-          .then(() => refreshBankCoins())
+          .then((res) => {
+            if (!res.ok) {
+              return res.json().then((d) => console.warn("Game end verification note:", d.error));
+            }
+            return refreshBankCoins();
+          })
           .catch(console.warn);
       }
     },
     [highScore, primaryWallet, refreshBankCoins]
   );
 
-  /* ── reset game ── */
+  /* ── reset game & initiate cryptographic HMAC session ── */
   const resetGame = useCallback(() => {
     if (minTokenRequired > 0 && !isEligible) {
       setEligibilityWarning(
@@ -459,6 +469,23 @@ export default function BlockFuelPunchAndRun() {
       return;
     }
     setEligibilityWarning(null);
+
+    // Request secure game session token
+    if (primaryWallet?.address) {
+      fetch("/api/game/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userAddress: primaryWallet.address }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.sessionToken) {
+            sessionTokenRef.current = data.sessionToken;
+          }
+        })
+        .catch(console.warn);
+    }
+
     const g = gs.current;
     g.charY = GROUND_Y - CHAR_DRAW_H;
     g.velY = 0;
@@ -487,7 +514,7 @@ export default function BlockFuelPunchAndRun() {
     g.dead = false;
     setScore(0);
     setGameState("playing");
-  }, [minTokenRequired, isEligible, tokenSymbol, tokenBalance]);
+  }, [minTokenRequired, isEligible, tokenSymbol, tokenBalance, primaryWallet]);
 
   /* ── main game loop ── */
   useEffect(() => {

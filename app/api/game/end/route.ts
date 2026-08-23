@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { verifyGameSessionToken } from '@/lib/sessionSecurity';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { userAddress, score, coinsCollected, durationSeconds } = body;
+    const { sessionToken, userAddress, score, coinsCollected } = body;
 
     if (!userAddress || typeof userAddress !== 'string') {
       return NextResponse.json({ error: 'Valid userAddress is required' }, { status: 400 });
@@ -16,9 +17,22 @@ export async function POST(request: Request) {
     const earnedCoins = Math.max(0, Number(coinsCollected) || 0);
     const finalScore = Math.max(0, Number(score) || 0);
 
+    // 1. Verify HMAC SHA-256 Session Signature & Anti-Cheat validation
+    const verification = verifyGameSessionToken(sessionToken, userAddress, finalScore, earnedCoins);
+    if (!verification.valid) {
+      console.warn(`[Security Alert] Rejected game session for ${userAddress}: ${verification.error}`);
+      return NextResponse.json(
+        { error: `Security check failed: ${verification.error}` },
+        { status: 403 }
+      );
+    }
+
+    const verifiedDuration = Math.round(verification.elapsedSeconds || 0);
+
     let updatedHighScore = finalScore;
     let newTotalCoins = earnedCoins;
 
+    // 2. Persist to Firestore
     if (db && db.type) {
       const userRef = doc(db, 'users', userAddress.toLowerCase());
       const snap = await getDoc(userRef);
@@ -53,12 +67,14 @@ export async function POST(request: Request) {
         });
       }
 
-      // Record Game Session Log
+      // Record Game Session Log with verified duration and session ID
       await addDoc(collection(db, 'game_sessions'), {
+        sessionId: verification.sessionData?.sessionId || 'unknown',
         userAddress: userAddress.toLowerCase(),
         score: finalScore,
         coinsCollected: earnedCoins,
-        durationSeconds: Number(durationSeconds) || 0,
+        durationSeconds: verifiedDuration,
+        verified: true,
         createdAt: serverTimestamp(),
       });
     }
@@ -68,6 +84,7 @@ export async function POST(request: Request) {
       highScore: updatedHighScore,
       totalCoins: newTotalCoins,
       coinsAdded: earnedCoins,
+      durationSeconds: verifiedDuration,
     });
   } catch (error: any) {
     console.error('Game end session error:', error);

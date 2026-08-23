@@ -83,18 +83,18 @@ export async function fetchEvmTokenBalance(
         address: effectiveToken as `0x${string}`,
         abi: erc20Abi,
         functionName: 'symbol',
-      }).catch(() => 'FUEL'),
+      }).catch(() => 'BLKFUEL'),
     ]);
 
     const formatted = parseFloat(formatUnits(rawBalance, decimals));
     return {
       balance: formatted,
       raw: rawBalance,
-      symbol,
+      symbol: symbol || 'BLKFUEL',
     };
   } catch (error) {
     console.warn('Error querying EVM token balance:', error);
     // Graceful fallback for local test/demo
-    return { balance: 100, raw: BigInt(100), symbol: 'FUEL' };
+    return { balance: 0, raw: BigInt(0), symbol: 'BLKFUEL' };
   }
 }

@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@/components/DynamicProvider';
 import { ConnectWalletButton } from '@/components/ConnectWalletButton';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 
 /**
  * FEATURE TOGGLE: Set to true when you are ready to re-enable the withdrawal portal.
@@ -54,21 +52,15 @@ export default function WithdrawPage() {
     }
   }, [primaryWallet, recipient]);
 
-  // Load user withdrawal history from Firestore
+  // Load user withdrawal history from secure server API
   const loadHistory = async () => {
-    if (!primaryWallet?.address || !db || !db.type) return;
+    if (!primaryWallet?.address) return;
     try {
-      const q = query(
-        collection(db, 'withdrawals'),
-        where('userAddress', '==', primaryWallet.address.toLowerCase()),
-        limit(15)
-      );
-      const snap = await getDocs(q);
-      const list: WithdrawalRecord[] = [];
-      snap.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as WithdrawalRecord);
-      });
-      setHistory(list);
+      const res = await fetch(`/api/withdrawals?userAddress=${encodeURIComponent(primaryWallet.address)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.history || []);
+      }
     } catch (err) {
       console.warn('History fetch note:', err);
     }
