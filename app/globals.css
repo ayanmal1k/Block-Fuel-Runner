@@ -1,6 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Press+Start+2P&family=Rajdhani:wght@500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -39,9 +39,9 @@
 }
 
 @theme inline {
-  --font-sans: 'Rajdhani', sans-serif;
+  --font-sans: 'Press Start 2P', monospace;
   --font-mono: 'Press Start 2P', monospace;
-  --font-display: 'Orbitron', sans-serif;
+  --font-display: 'Press Start 2P', monospace;
   --color-fuel-primary: var(--fuel-primary);
   --color-fuel-glow: var(--fuel-glow);
   --color-fuel-secondary: var(--fuel-secondary);
@@ -53,14 +53,16 @@
 }
 
 @layer base {
-  * {
+  *, *::before, *::after {
     box-sizing: border-box;
+    font-family: 'Press Start 2P', monospace !important;
   }
-  body {
+  html, body {
     background-color: #060b0e;
     color: #e0f2f1;
     overflow-x: hidden;
     user-select: none;
+    font-family: 'Press Start 2P', monospace !important;
   }
 }
 

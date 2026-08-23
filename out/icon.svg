@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1e22"/>
+      <stop offset="100%" stop-color="#050d0f"/>
+    </linearGradient>
+    <linearGradient id="neonFlame" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00ff87"/>
+      <stop offset="50%" stop-color="#2ed573"/>
+      <stop offset="100%" stop-color="#1dd1a1"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Block container -->
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#bgGrad)" stroke="#2ed573" stroke-width="2.5" stroke-opacity="0.8"/>
+  <rect x="8" y="8" width="48" height="48" rx="8" fill="none" stroke="#1dd1a1" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="6,3"/>
+
+  <!-- Glowing Neon Fuel Flame Icon -->
+  <path d="M32 14 C35 22, 45 25, 45 36 C45 44, 39 49, 32 49 C25 49, 19 44, 19 36 C19 28, 25 24, 28 20 C28 27, 33 29, 35 27 C36 24, 34 18, 32 14 Z" fill="url(#neonFlame)" filter="url(#glow)"/>
+
+  <!-- Inner core flame highlight -->
+  <path d="M32 28 C34 33, 38 35, 38 41 C38 45, 35 47, 32 47 C29 47, 26 45, 26 41 C26 36, 29 34, 30 31 C31 34, 33 35, 34 34 Z" fill="#ffffff" opacity="0.9"/>
+</svg>

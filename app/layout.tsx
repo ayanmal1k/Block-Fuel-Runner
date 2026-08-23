@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Press_Start_2P } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const pressStart2P = Press_Start_2P({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-press-start',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'BLOCK FUEL: Punch and Run | Fast-Paced Cyber Runner',
@@ -40,12 +44,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={pressStart2P.variable}>
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
-      <body className="font-sans antialiased bg-[#060b0e] text-[#e0f2f1]">
+      <body className={`${pressStart2P.className} antialiased bg-[#060b0e] text-[#e0f2f1]`}>
         {children}
         <Analytics />
       </body>
