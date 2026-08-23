@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { DynamicContextProvider, useDynamicContext } from '@dynamic-labs/sdk-react-core';
 import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
 import { fetchEvmTokenBalance, getRobinhoodRpcList } from '@/lib/evmBalance';
@@ -45,6 +45,7 @@ const WalletContext = createContext<WalletContextType>({
 });
 
 export const useWallet = () => useContext(WalletContext);
+export const useAppWallet = useWallet;
 
 function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
   const [nativeAddress, setNativeAddress] = useState<string | null>(null);
@@ -72,8 +73,19 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
       dynamicHandleLogOut = dyn.handleLogOut;
     }
   } catch {
-    // Dynamic context not loaded or disabled
+    // Dynamic context fallback
   }
+
+  // Restore fallback wallet from localStorage only if Dynamic is not managing session
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (dynamicSetShowAuthFlow) return;
+
+    const saved = localStorage.getItem('block_fuel_evm_wallet');
+    if (saved && !dynamicWalletAddress) {
+      setNativeAddress(saved);
+    }
+  }, [dynamicSetShowAuthFlow, dynamicWalletAddress]);
 
   const effectiveAddress = dynamicWalletAddress || nativeAddress;
 
@@ -82,17 +94,12 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
     getGameSettings().then(setGameSettings);
   }, []);
 
-  // Restore fallback wallet from localStorage
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = localStorage.getItem('block_fuel_evm_wallet');
-    if (saved && !dynamicWalletAddress) {
-      setNativeAddress(saved);
-    }
-  }, [dynamicWalletAddress]);
-
-  // Connect via window.ethereum (MetaMask / Robinhood / Rabby browser extension)
+  // Connect native browser fallback
   const connectNativeEVM = useCallback(async () => {
+    if (dynamicSetShowAuthFlow) {
+      dynamicSetShowAuthFlow(true);
+      return;
+    }
     try {
       setWalletError(null);
       if (typeof window !== 'undefined' && (window as any).ethereum) {
@@ -104,23 +111,24 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
           localStorage.setItem('block_fuel_evm_wallet', accounts[0]);
         }
       } else {
-        // Mock connection for test environment
         const mockAddr = `0x71C${Math.random().toString(16).slice(2, 10)}${Date.now().toString(16).slice(-6)}`;
         setNativeAddress(mockAddr);
         localStorage.setItem('block_fuel_evm_wallet', mockAddr);
       }
     } catch (err: any) {
-      console.error('Error connecting EVM wallet:', err);
-      setWalletError(err.message || 'Failed to connect EVM wallet');
+      console.warn('Native wallet connection note:', err);
+      setWalletError(err.message || 'Connection cancelled');
     }
-  }, []);
+  }, [dynamicSetShowAuthFlow]);
 
   // Handle logout
   const handleLogOut = useCallback(async () => {
     if (dynamicHandleLogOut) {
       try {
         await dynamicHandleLogOut();
-      } catch {}
+      } catch (e) {
+        console.warn('Dynamic logout note:', e);
+      }
     }
     setNativeAddress(null);
     if (typeof window !== 'undefined') {
@@ -130,6 +138,7 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
     setTokenBalance(0);
   }, [dynamicHandleLogOut]);
 
+  // Open native Dynamic modal
   const setShowAuthFlow = useCallback(
     (show: boolean) => {
       if (dynamicSetShowAuthFlow) {
@@ -169,7 +178,6 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
         const data = snap.data();
         setBankCoins(Number(data.totalCoins || 0));
       } else {
-        // Initialize user in Firestore
         await setDoc(userRef, {
           address: effectiveAddress.toLowerCase(),
           totalCoins: 0,
@@ -204,22 +212,6 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
     }
   }, [effectiveAddress, refetchBalance, refreshBankCoins]);
 
-  // Catch unhandled Dynamic API fetch rejections gracefully
-  useEffect(() => {
-    const handleRejection = (e: PromiseRejectionEvent) => {
-      if (
-        e.reason?.message?.includes('Failed to fetch') ||
-        e.reason?.stack?.includes('SDKApi') ||
-        e.reason?.stack?.includes('BaseAPI')
-      ) {
-        e.preventDefault();
-        console.warn('Dynamic API fetch note: continuing with direct EVM provider.');
-      }
-    };
-    window.addEventListener('unhandledrejection', handleRejection);
-    return () => window.removeEventListener('unhandledrejection', handleRejection);
-  }, []);
-
   const minRequired = gameSettings.minTokenRequired || 0;
   const isEligible = minRequired <= 0 || tokenBalance >= minRequired;
 
@@ -244,39 +236,6 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
 
-class DynamicErrorBoundary extends React.Component<
-  { fallback: React.ReactNode; children: React.ReactNode },
-  { hasError: boolean }
-> {
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: any) {
-    console.warn('Dynamic SDK unavailable (using direct browser EVM connector):', error);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
-    return this.props.children;
-  }
-}
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isValidDynamicEnvId(id?: string): boolean {
-  if (!id) return false;
-  const trimmed = id.trim();
-  return UUID_REGEX.test(trimmed);
-}
-
 export function DynamicProvider({ children }: { children: React.ReactNode }) {
   const dynamicEnvId = process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID;
 
@@ -299,23 +258,22 @@ export function DynamicProvider({ children }: { children: React.ReactNode }) {
     },
   ];
 
-  if (!isValidDynamicEnvId(dynamicEnvId)) {
+  if (!dynamicEnvId || dynamicEnvId === 'YOUR_DYNAMIC_ENVIRONMENT_ID') {
     return <DynamicWalletBridge>{children}</DynamicWalletBridge>;
   }
 
   return (
-    <DynamicErrorBoundary fallback={<DynamicWalletBridge>{children}</DynamicWalletBridge>}>
-      <DynamicContextProvider
-        settings={{
-          environmentId: dynamicEnvId!,
-          walletConnectors: [EthereumWalletConnectors],
-          overrides: {
-            evmNetworks: customEvmNetworks,
-          },
-        }}
-      >
-        <DynamicWalletBridge>{children}</DynamicWalletBridge>
-      </DynamicContextProvider>
-    </DynamicErrorBoundary>
+    <DynamicContextProvider
+      settings={{
+        environmentId: dynamicEnvId,
+        walletConnectors: [EthereumWalletConnectors],
+        initialAuthenticationMode: 'connect-only',
+        overrides: {
+          evmNetworks: customEvmNetworks,
+        },
+      }}
+    >
+      <DynamicWalletBridge>{children}</DynamicWalletBridge>
+    </DynamicContextProvider>
   );
 }
