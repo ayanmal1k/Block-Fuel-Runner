@@ -172,55 +172,27 @@ function spawnDestroyParticles(ob: Obstacle, particles: Particle[]) {
 
 function removeSpriteBackground(img: HTMLImageElement): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth || img.width;
-  canvas.height = img.naturalHeight || img.height;
-  const ctx = canvas.getContext("2d")!;
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
   ctx.drawImage(img, 0, 0);
 
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const imgData = ctx.getImageData(0, 0, w, h);
   const data = imgData.data;
 
-  // Find dominant color
-  const colorCounts = new Map<string, number>();
-  let maxCount = 0;
-  let domR = 160, domG = 160, domB = 160;
+  // Sample top-left corner color as background key
+  const bgR = data[0];
+  const bgG = data[1];
+  const bgB = data[2];
+  const toleranceSq = 50 * 50;
 
-  for (let i = 0; i < data.length; i += 16) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const a = data[i + 3];
-    if (a < 50) continue;
-
-    const binR = Math.round(r / 8) * 8;
-    const binG = Math.round(g / 8) * 8;
-    const binB = Math.round(b / 8) * 8;
-    const key = `${binR},${binG},${binB}`;
-
-    const count = (colorCounts.get(key) || 0) + 1;
-    colorCounts.set(key, count);
-
-    if (count > maxCount) {
-      maxCount = count;
-      domR = binR;
-      domG = binG;
-      domB = binB;
-    }
-  }
-
-  // Clear matching background pixels
-  const tolerance = 45;
   for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-
-    const dr = r - domR;
-    const dg = g - domG;
-    const db = b - domB;
-    const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-
-    if (dist < tolerance) {
+    const dr = data[i] - bgR;
+    const dg = data[i + 1] - bgG;
+    const db = data[i + 2] - bgB;
+    if (dr * dr + dg * dg + db * db < toleranceSq) {
       data[i + 3] = 0;
     }
   }
@@ -354,7 +326,7 @@ export default function MannyObstacleRun() {
       };
     };
 
-    const loadImage = (src: string, ref: React.MutableRefObject<HTMLImageElement | null>) => {
+    const loadImage = (src: string, ref: React.MutableRefObject<HTMLImageElement | HTMLCanvasElement | null>) => {
       const img = new Image();
       img.src = src;
       ref.current = img;
@@ -369,7 +341,7 @@ export default function MannyObstacleRun() {
 
     cleanImageRef("/aero-jelly.jpg", aeroJellyImg);
     cleanImageRef("/hollow.jpg", hollowImg);
-    cleanImageRef("/mite.png", miteImg);
+    loadImage("/mite.png", miteImg);
 
     bgImg.current = new Image();
     bgImg.current.src = "/bg.png";
@@ -1127,7 +1099,7 @@ export default function MannyObstacleRun() {
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [highScore]);
+  }, []);
 
   /* ── start / restart on key press ── */
   useEffect(() => {
