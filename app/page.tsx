@@ -2,36 +2,27 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 
-/* ───────── sprite-sheet geometry ───────── */
-const IDLE_FRAMES = 4;
-const IDLE_SHEET_W = 1800;
-const IDLE_SHEET_H = 474;
-const IDLE_FW = IDLE_SHEET_W / IDLE_FRAMES; // 450
-const IDLE_FH = IDLE_SHEET_H;               // 474
+/* ───────── sprite geometry ───────── */
+const IDLE_FW = 512;
+const IDLE_FH = 512;
 
 const RUN_FRAMES = 6;
-const RUN_SHEET_W = 2688;
-const RUN_SHEET_H = 453;
-const RUN_FW = RUN_SHEET_W / RUN_FRAMES;    // 448
-const RUN_FH = RUN_SHEET_H;                 // 453
+const RUN_SHEET_W = 1536;
+const RUN_SHEET_H = 256;
+const RUN_FW = RUN_SHEET_W / RUN_FRAMES; // 256
+const RUN_FH = RUN_SHEET_H;              // 256
 
-const DUCK_FRAMES = 4;
-const DUCK_SHEET_W = 1024;
-const DUCK_SHEET_H = 229;
-const DUCK_FW = DUCK_SHEET_W / DUCK_FRAMES; // 256
-const DUCK_FH = DUCK_SHEET_H;               // 229
+const DUCK_FW = 512;
+const DUCK_FH = 512;
 
-const JUMP_FRAMES = 4;
-const JUMP_SHEET_W = 1024;
-const JUMP_SHEET_H = 229;
-const JUMP_FW = JUMP_SHEET_W / JUMP_FRAMES; // 256
-const JUMP_FH = JUMP_SHEET_H;               // 229
+const JUMP_FW = 512;
+const JUMP_FH = 512;
 
 const PUNCH_FRAMES = 4;
 const PUNCH_SHEET_W = 1024;
-const PUNCH_SHEET_H = 228;
+const PUNCH_SHEET_H = 256;
 const PUNCH_FW = PUNCH_SHEET_W / PUNCH_FRAMES; // 256
-const PUNCH_FH = PUNCH_SHEET_H;                // 228
+const PUNCH_FH = PUNCH_SHEET_H;                // 256
 
 const AERO_FRAMES = 2;
 const AERO_SHEET_W = 687;
@@ -63,14 +54,9 @@ const CANVAS_H = 400;
 const GROUND_Y = CANVAS_H - 60;            // ground line
 const CHAR_DRAW_H = 100;                   // normal rendered height
 const CHAR_DRAW_W = 100;                   // normal rendered width
-const DUCK_DRAW_H = 90;                    // cropped duck height (fits under high obstacles)
-const DUCK_DRAW_W = 112;                   // natural proportional width when ducking
-const JUMP_DRAW_H = 118;                   // height when jumping (keeps character scale consistent)
-const JUMP_DRAW_W = 118;                   // width when jumping (keeps character scale consistent)
 const PUNCH_DRAW_H = 100;                  // punch height
-const PUNCH_DRAW_W = 130;                  // punch is wider (arm extends)
-const CHAR_X = 80;
-const SPRITE_CROP = 10;                         // character x position
+const PUNCH_DRAW_W = 115;                  // punch rendered width
+const CHAR_X = 80;                         // character x position
 
 const GRAVITY = 0.65;
 const JUMP_VELOCITY = -14;
@@ -316,9 +302,7 @@ export default function MannyObstacleRun() {
     frame: 0,
     lastTime: 0,
     animAccumulator: 0,
-    duckAnimAccumulator: 0,
     animFrame: 0,
-    duckAnimFrame: 0,
     bgX: 0,
     obstacles: [] as Obstacle[],
     bullets: [] as Bullet[],
@@ -341,12 +325,13 @@ export default function MannyObstacleRun() {
   const keys = useRef<Record<string, boolean>>({});
 
   /* ── load images once ── */
-  const idleImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
-  const runImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
+  const idleImg = useRef<HTMLImageElement | null>(null);
+  const readyImg = useRef<HTMLImageElement | null>(null);
+  const runImg = useRef<HTMLImageElement | null>(null);
   const bgImg = useRef<HTMLImageElement | null>(null);
-  const duckImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
-  const punchImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
-  const jumpImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
+  const duckImg = useRef<HTMLImageElement | null>(null);
+  const punchImg = useRef<HTMLImageElement | null>(null);
+  const jumpImg = useRef<HTMLImageElement | null>(null);
   const aeroJellyImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
   const hollowImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
   const miteImg = useRef<HTMLCanvasElement | HTMLImageElement | null>(null);
@@ -369,11 +354,19 @@ export default function MannyObstacleRun() {
       };
     };
 
-    cleanImageRef("/idle.jpg", idleImg);
-    cleanImageRef("/runn.jpg", runImg);
-    cleanImageRef("/duck.jpg", duckImg);
-    cleanImageRef("/punch.jpg", punchImg);
-    cleanImageRef("/jump.jpg", jumpImg);
+    const loadImage = (src: string, ref: React.MutableRefObject<HTMLImageElement | null>) => {
+      const img = new Image();
+      img.src = src;
+      ref.current = img;
+    };
+
+    loadImage("/New%20folder/idle.png", idleImg);
+    loadImage("/New%20folder/ready.png", readyImg);
+    loadImage("/New%20folder/run.png", runImg);
+    loadImage("/New%20folder/duck.png", duckImg);
+    loadImage("/New%20folder/punch.png", punchImg);
+    loadImage("/New%20folder/jump.png", jumpImg);
+
     cleanImageRef("/aero-jelly.jpg", aeroJellyImg);
     cleanImageRef("/hollow.jpg", hollowImg);
     cleanImageRef("/mite.png", miteImg);
@@ -474,7 +467,6 @@ export default function MannyObstacleRun() {
     g.punchAnimFrame = 0;
     g.frame = 0;
     g.animFrame = 0;
-    g.duckAnimFrame = 0;
     g.bgX = 0;
     g.obstacles = [];
     g.bullets = [];
@@ -614,9 +606,7 @@ export default function MannyObstacleRun() {
         g.velY += GRAVITY * dt;
         g.charY += g.velY * dt;
 
-        const standY = g.isDucking
-          ? GROUND_Y - DUCK_DRAW_H
-          : GROUND_Y - CHAR_DRAW_H;
+        const standY = GROUND_Y - CHAR_DRAW_H;
 
         if (g.charY >= standY) {
           g.charY = standY;
@@ -629,14 +619,6 @@ export default function MannyObstacleRun() {
         if (g.animAccumulator >= 6) {
           g.animFrame = (g.animFrame + 1) % RUN_FRAMES;
           g.animAccumulator -= 6;
-        }
-        // Duck animation frame
-        if (g.isDucking) {
-          g.duckAnimAccumulator += dt;
-          if (g.duckAnimAccumulator >= 8) {
-            g.duckAnimFrame = (g.duckAnimFrame + 1) % DUCK_FRAMES;
-            g.duckAnimAccumulator -= 8;
-          }
         }
 
         // Spawn obstacles
@@ -684,13 +666,13 @@ export default function MannyObstacleRun() {
 
         // Bullet collision with player
         {
-          const bw = g.isDucking ? DUCK_DRAW_W : g.isPunching ? PUNCH_DRAW_W : CHAR_DRAW_W;
-          const bh = g.isDucking ? DUCK_DRAW_H : g.isPunching ? PUNCH_DRAW_H : CHAR_DRAW_H;
+          const bw = g.isPunching ? PUNCH_DRAW_W : CHAR_DRAW_W;
+          const bh = CHAR_DRAW_H;
           const bcx = CHAR_X;
           const bcy = g.charY;
-          const bpLeft = bcx + 40;
-          const bpRight = bcx + bw - 40;
-          const bpTop = bcy + 10;
+          const bpLeft = bcx + 35;
+          const bpRight = bcx + bw - 35;
+          const bpTop = g.isDucking ? bcy + 45 : bcy + 10;
           const bpBottom = bcy + bh - 6;
           for (let i = g.bullets.length - 1; i >= 0; i--) {
             const b = g.bullets[i];
@@ -798,8 +780,8 @@ export default function MannyObstacleRun() {
           c.x -= g.speed * dt;
           if (c.x + COIN_W < -10) { g.coins.splice(i, 1); continue; }
           // Collision with player hitbox
-          const cw = g.isDucking ? DUCK_DRAW_W : g.isPunching ? PUNCH_DRAW_W : CHAR_DRAW_W;
-          const cH = g.isDucking ? DUCK_DRAW_H : g.isPunching ? PUNCH_DRAW_H : CHAR_DRAW_H;
+          const cw = g.isPunching ? PUNCH_DRAW_W : CHAR_DRAW_W;
+          const cH = CHAR_DRAW_H;
           const cx = CHAR_X;
           const cy = g.charY;
           if (
@@ -832,16 +814,16 @@ export default function MannyObstacleRun() {
         }
 
         // Collision detection (skip destroyed obstacles)
-        const charW = g.isDucking ? DUCK_DRAW_W : g.isPunching ? PUNCH_DRAW_W : CHAR_DRAW_W;
-        const charH = g.isDucking ? DUCK_DRAW_H : g.isPunching ? PUNCH_DRAW_H : CHAR_DRAW_H;
+        const charW = g.isPunching ? PUNCH_DRAW_W : CHAR_DRAW_W;
+        const charH = CHAR_DRAW_H;
         const cx = CHAR_X;
         const cy = g.charY;
 
         // Shrink hitbox a bit for forgiveness
-        const hbShrink = 40;
+        const hbShrink = 35;
         const pLeft = cx + hbShrink;
         const pRight = cx + charW - hbShrink;
-        const pTop = cy + hbShrink;
+        const pTop = g.isDucking ? cy + 45 : cy + hbShrink;
         const pBottom = cy + charH - hbShrink / 2;
 
         for (const ob of g.obstacles) {
@@ -1001,12 +983,12 @@ export default function MannyObstacleRun() {
       /* ── draw character ── */
       if (g.playing && !g.dead) {
         if (g.isPunching) {
-          // Punching animation
-          if (punchImg.current) {
+          // Punching animation (4 frames, 256x256 each)
+          if (punchImg.current && punchImg.current.complete) {
             const sx = g.punchAnimFrame * PUNCH_FW;
             ctx.drawImage(
               punchImg.current,
-              sx + SPRITE_CROP, SPRITE_CROP, PUNCH_FW - SPRITE_CROP * 2, PUNCH_FH - SPRITE_CROP * 2,
+              sx, 0, PUNCH_FW, PUNCH_FH,
               CHAR_X, g.charY, PUNCH_DRAW_W, PUNCH_DRAW_H
             );
           }
@@ -1030,48 +1012,42 @@ export default function MannyObstacleRun() {
             }
           }
         } else if (g.isDucking) {
-          // Ducking animation using duck sprite sheet (cropped, not squished)
-          if (duckImg.current) {
-            const sx = g.duckAnimFrame * DUCK_FW;
-            const cropRatio = DUCK_DRAW_H / 100; // 0.6
-            const sy = DUCK_FH * (1 - cropRatio);
-            const sh = DUCK_FH * cropRatio;
+          // Ducking animation using single 512x512 duck image (character in lower half)
+          if (duckImg.current && duckImg.current.complete) {
             ctx.drawImage(
               duckImg.current,
-              sx + SPRITE_CROP, sy + SPRITE_CROP, DUCK_FW - SPRITE_CROP * 2, sh - SPRITE_CROP * 2,
-              CHAR_X, g.charY, DUCK_DRAW_W, DUCK_DRAW_H
+              0, 0, DUCK_FW, DUCK_FH,
+              CHAR_X, g.charY, CHAR_DRAW_W, CHAR_DRAW_H
             );
           }
-          } else if (g.isJumping) {
-          // Jumping animation - use running sprite
-          if (runImg.current) {
-            const sx = g.animFrame * RUN_FW;
+        } else if (g.isJumping) {
+          // Jumping animation using single 512x512 jump image
+          if (jumpImg.current && jumpImg.current.complete) {
             ctx.drawImage(
-              runImg.current,
-              sx + SPRITE_CROP, SPRITE_CROP, RUN_FW - SPRITE_CROP * 2, RUN_FH - SPRITE_CROP * 2,
+              jumpImg.current,
+              0, 0, JUMP_FW, JUMP_FH,
               CHAR_X, g.charY, CHAR_DRAW_W, CHAR_DRAW_H
             );
           }
         } else {
-          // Running animation
-          if (runImg.current) {
+          // Running animation (6 frames, 256x256 each)
+          if (runImg.current && runImg.current.complete) {
             const sx = g.animFrame * RUN_FW;
             ctx.drawImage(
               runImg.current,
-              sx + SPRITE_CROP, SPRITE_CROP, RUN_FW - SPRITE_CROP * 2, RUN_FH - SPRITE_CROP * 2,
+              sx, 0, RUN_FW, RUN_FH,
               CHAR_X, g.charY, CHAR_DRAW_W, CHAR_DRAW_H
             );
           }
         }
       } else {
-        // Idle animation
-        if (idleImg.current) {
-          const idleAnimFrame =
-            Math.floor(Date.now() / 200) % IDLE_FRAMES;
-          const sx = idleAnimFrame * IDLE_FW;
+        // Idle animation: alternating idle.png and ready.png back to back (512x512 each)
+        const idleAnimFrame = Math.floor(Date.now() / 400) % 2;
+        const currentIdleImg = idleAnimFrame === 0 ? idleImg.current : readyImg.current;
+        if (currentIdleImg && currentIdleImg.complete) {
           ctx.drawImage(
-            idleImg.current,
-            sx + SPRITE_CROP, SPRITE_CROP, IDLE_FW - SPRITE_CROP * 2, IDLE_FH - SPRITE_CROP * 2,
+            currentIdleImg,
+            0, 0, IDLE_FW, IDLE_FH,
             CHAR_X, GROUND_Y - CHAR_DRAW_H, CHAR_DRAW_W, CHAR_DRAW_H
           );
         }
