@@ -374,98 +374,29 @@ export default function AdminPage() {
                   🎯 MINIMUM BALANCE REQUIREMENT
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                      MINIMUM TOKEN HOLDING TO PLAY
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={settings.minTokenRequired}
-                      onChange={(e) => setSettings({ ...settings, minTokenRequired: Number(e.target.value) })}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: 'rgba(6, 15, 19, 0.9)',
-                        border: '1px solid rgba(0, 255, 135, 0.3)',
-                        borderRadius: '6px',
-                        color: '#00ff87',
-                        fontSize: '9px',
-                        fontFamily: "'Press Start 2P', monospace",
-                      }}
-                    />
-                    <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '4px', display: 'block' }}>
-                      Required token balance on Robinhood Chain to run (Set 0 for open access).
-                    </span>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                      ROBINHOOD CHAIN ID (EVM)
-                    </label>
-                    <input
-                      type="number"
-                      value={settings.chainId}
-                      onChange={(e) => setSettings({ ...settings, chainId: Number(e.target.value) })}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: 'rgba(6, 15, 19, 0.9)',
-                        border: '1px solid rgba(0, 229, 255, 0.3)',
-                        borderRadius: '6px',
-                        color: '#00e5ff',
-                        fontSize: '9px',
-                        fontFamily: "'Press Start 2P', monospace",
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                      TOKEN CONTRACT ADDRESS (Robinhood Chain ERC-20)
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.tokenAddress}
-                      onChange={(e) => setSettings({ ...settings, tokenAddress: e.target.value })}
-                      placeholder="0x0000000000000000000000000000000000000000"
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: 'rgba(6, 15, 19, 0.9)',
-                        border: '1px solid rgba(0, 229, 255, 0.3)',
-                        borderRadius: '6px',
-                        color: '#00e5ff',
-                        fontSize: '9px',
-                        fontFamily: "'Press Start 2P', monospace",
-                      }}
-                    />
-                    <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '4px', display: 'block' }}>
-                      Address of the token contract queried to check player eligibility.
-                    </span>
-                  </div>
-
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
-                      ROBINHOOD CHAIN RPC ENDPOINT
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.rpcUrl}
-                      onChange={(e) => setSettings({ ...settings, rpcUrl: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        background: 'rgba(6, 15, 19, 0.9)',
-                        border: '1px solid rgba(0, 229, 255, 0.3)',
-                        borderRadius: '6px',
-                        color: '#00e5ff',
-                        fontSize: '9px',
-                        fontFamily: "'Press Start 2P', monospace",
-                      }}
-                    />
-                  </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                    MINIMUM TOKEN HOLDING TO PLAY
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={settings.minTokenRequired}
+                    onChange={(e) => setSettings({ ...settings, minTokenRequired: Number(e.target.value) })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'rgba(6, 15, 19, 0.9)',
+                      border: '1px solid rgba(0, 255, 135, 0.3)',
+                      borderRadius: '6px',
+                      color: '#00ff87',
+                      fontSize: '9px',
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  />
+                  <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '6px', display: 'block' }}>
+                    Required token balance on Robinhood Chain to play the game (Set 0 for open access).
+                  </span>
                 </div>
               </div>
 

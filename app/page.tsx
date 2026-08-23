@@ -1651,12 +1651,12 @@ export default function BlockFuelPunchAndRun() {
               </div>
             </div>
 
-            {/* Actions: Reboot / Withdraw */}
+            {/* Actions: Retry Run */}
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
               <button
                 onClick={resetGame}
                 style={{
-                  padding: "12px 24px",
+                  padding: "12px 28px",
                   fontSize: "9px",
                   fontFamily: "'Press Start 2P', monospace",
                   background: "linear-gradient(90deg, #00ff87, #00e5ff)",
@@ -1671,27 +1671,6 @@ export default function BlockFuelPunchAndRun() {
               >
                 ↻ RETRY RUN
               </button>
-
-              <Link
-                href="/withdraw"
-                style={{
-                  padding: "12px 24px",
-                  fontSize: "9px",
-                  fontFamily: "'Press Start 2P', monospace",
-                  background: "rgba(255, 215, 0, 0.15)",
-                  border: "1px solid rgba(255, 215, 0, 0.5)",
-                  color: "#ffd700",
-                  fontWeight: "bold",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  boxShadow: "0 0 15px rgba(255, 215, 0, 0.3)",
-                }}
-              >
-                💰 WITHDRAW
-              </Link>
             </div>
             <div style={{ fontSize: "7px", color: "rgba(224, 242, 241, 0.4)", marginTop: "10px" }}>
               (Or press any key on keyboard to retry)
