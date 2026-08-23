@@ -114,45 +114,9 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
 
   const effectiveAddress = dynamicWalletAddress || nativeAddress;
 
-  // Real-time listener for dynamic game settings from Firestore
+  // Fetch dynamic game settings from server API
   useEffect(() => {
-    if (!db || !db.type) {
-      getGameSettings().then(setGameSettings);
-      return;
-    }
-    try {
-      const configRef = doc(db, 'settings', 'game_config');
-      const unsub = onSnapshot(
-        configRef,
-        (snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            setGameSettings({
-              gameFeeAmount: typeof data.gameFeeAmount === 'number' ? data.gameFeeAmount : 0,
-              minTokenRequired: typeof data.minTokenRequired === 'number' ? data.minTokenRequired : 0,
-              coinsPerToken: typeof data.coinsPerToken === 'number' && data.coinsPerToken > 0 ? data.coinsPerToken : 10,
-              minWithdrawCoins: typeof data.minWithdrawCoins === 'number' && data.minWithdrawCoins >= 0 ? data.minWithdrawCoins : 100,
-              tokenAddress: data.tokenAddress || '0x020bfC650A365f8BB26819deAAbF3E21291018b4',
-              chainId: typeof data.chainId === 'number' ? data.chainId : 4663,
-              rpcUrl: data.rpcUrl || 'https://rpc.mainnet.chain.robinhood.com',
-              leaderboardEnabled: data.leaderboardEnabled !== undefined ? Boolean(data.leaderboardEnabled) : true,
-              maintenanceMode: data.maintenanceMode !== undefined ? Boolean(data.maintenanceMode) : false,
-              startDate: data.startDate || '',
-              endDate: data.endDate || '',
-            });
-          } else {
-            getGameSettings().then(setGameSettings);
-          }
-        },
-        (err) => {
-          console.warn('Game settings listener note:', err);
-          getGameSettings().then(setGameSettings);
-        }
-      );
-      return () => unsub();
-    } catch {
-      getGameSettings().then(setGameSettings);
-    }
+    getGameSettings().then(setGameSettings);
   }, []);
 
   // Connect native browser fallback with Robinhood Mainnet switch/add

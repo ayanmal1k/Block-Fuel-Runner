@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { getGameSettings } from '@/lib/gameSettings';
+import { getServerGameSettings } from '@/lib/serverGameSettings';
 import { fetchEvmTokenBalance } from '@/lib/evmBalance';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const coinsToExchange = Number(amountCoins);
 
     // 1. Fetch live game settings
-    const settings = await getGameSettings();
+    const settings = await getServerGameSettings();
 
     // 2. Validate minimum token balance requirement on Robinhood Chain
     if (settings.minTokenRequired > 0) {

@@ -1,17 +1,14 @@
 /**
- * Centralized Game Settings & Economics System (Server & Shared)
+ * Centralized Game Settings & Economics System (Client Safe)
  *
- * Parameters are managed via Firestore `settings/game_config` and Next.js API.
+ * Provides interface definitions, defaults, and API client fetcher.
  */
-
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export interface GameSettings {
   gameFeeAmount: number;
-  minTokenRequired: number;       // Minimum token threshold to play / withdraw
-  coinsPerToken: number;          // Fuel Coins needed per 1 token (e.g. 10 coins = 1 token)
-  minWithdrawCoins: number;       // Minimum coins threshold to withdraw (e.g. 100)
+  minTokenRequired: number;       // Minimum token threshold to play
+  coinsPerToken: number;          // Fuel Coins needed per 1 token
+  minWithdrawCoins: number;       // Minimum coins threshold to withdraw
   tokenAddress: string;           // ERC-20 contract address on Robinhood Chain
   chainId: number;                // Robinhood Chain EVM ID
   rpcUrl: string;                 // EVM RPC URL
@@ -36,65 +33,21 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
 };
 
 /**
- * Fetch dynamic game settings with fallback defaults.
- * Automatically handles client-side API requests and server-side direct Firestore queries.
+ * Fetch dynamic game settings from server API endpoint with fallback defaults.
+ * Safe for client-side and browser usage (zero direct Firebase dependencies).
  */
 export async function getGameSettings(): Promise<GameSettings> {
-  // If running in browser, fetch settings from API route
-  if (typeof window !== 'undefined') {
-    try {
-      const res = await fetch('/api/admin/settings');
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          ...DEFAULT_GAME_SETTINGS,
-          ...data,
-        };
-      }
-    } catch {
-      // Fallback to defaults
-    }
-    return DEFAULT_GAME_SETTINGS;
-  }
-
-  // Server-side Firestore access
   try {
-    if (!db || !db.type) {
-      return DEFAULT_GAME_SETTINGS;
-    }
-    const configRef = doc(db, 'settings', 'game_config');
-    const snap = await getDoc(configRef);
-
-    if (snap.exists()) {
-      const data = snap.data();
+    const res = await fetch('/api/admin/settings');
+    if (res.ok) {
+      const data = await res.json();
       return {
-        gameFeeAmount: typeof data.gameFeeAmount === 'number' ? data.gameFeeAmount : DEFAULT_GAME_SETTINGS.gameFeeAmount,
-        minTokenRequired: typeof data.minTokenRequired === 'number' ? data.minTokenRequired : DEFAULT_GAME_SETTINGS.minTokenRequired,
-        coinsPerToken: typeof data.coinsPerToken === 'number' && data.coinsPerToken > 0 ? data.coinsPerToken : DEFAULT_GAME_SETTINGS.coinsPerToken,
-        minWithdrawCoins: typeof data.minWithdrawCoins === 'number' && data.minWithdrawCoins >= 0 ? data.minWithdrawCoins : DEFAULT_GAME_SETTINGS.minWithdrawCoins,
-        tokenAddress: data.tokenAddress || DEFAULT_GAME_SETTINGS.tokenAddress,
-        chainId: typeof data.chainId === 'number' ? data.chainId : DEFAULT_GAME_SETTINGS.chainId,
-        rpcUrl: data.rpcUrl || DEFAULT_GAME_SETTINGS.rpcUrl,
-        leaderboardEnabled: data.leaderboardEnabled !== undefined ? Boolean(data.leaderboardEnabled) : DEFAULT_GAME_SETTINGS.leaderboardEnabled,
-        maintenanceMode: data.maintenanceMode !== undefined ? Boolean(data.maintenanceMode) : DEFAULT_GAME_SETTINGS.maintenanceMode,
-        startDate: data.startDate || '',
-        endDate: data.endDate || '',
+        ...DEFAULT_GAME_SETTINGS,
+        ...data,
       };
     }
-
-    // Initialize document in Firestore if not existing
-    try {
-      await setDoc(configRef, {
-        ...DEFAULT_GAME_SETTINGS,
-        createdAt: serverTimestamp(),
-      });
-    } catch {
-      // Quietly ignore if write fails
-    }
-
-    return DEFAULT_GAME_SETTINGS;
-  } catch (err) {
-    console.error('Error loading game settings from Firestore:', err);
-    return DEFAULT_GAME_SETTINGS;
+  } catch {
+    // Fallback to default values
   }
+  return DEFAULT_GAME_SETTINGS;
 }

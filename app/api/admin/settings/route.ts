@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getGameSettings, DEFAULT_GAME_SETTINGS } from '@/lib/gameSettings';
+import { DEFAULT_GAME_SETTINGS } from '@/lib/gameSettings';
+import { getServerGameSettings } from '@/lib/serverGameSettings';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const settings = await getGameSettings();
+    const settings = await getServerGameSettings();
     return NextResponse.json(settings);
   } catch (error: any) {
     console.error('Error fetching admin settings:', error);
