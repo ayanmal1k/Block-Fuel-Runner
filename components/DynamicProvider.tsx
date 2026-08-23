@@ -51,7 +51,7 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
   const [nativeAddress, setNativeAddress] = useState<string | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [tokenBalance, setTokenBalance] = useState<number>(0);
-  const [tokenSymbol, setTokenSymbol] = useState<string>('FUEL');
+  const [tokenSymbol, setTokenSymbol] = useState<string>('ETH');
   const [isCheckingBalance, setIsCheckingBalance] = useState<boolean>(false);
   const [bankCoins, setBankCoins] = useState<number>(0);
   const [gameSettings, setGameSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
@@ -60,9 +60,11 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
   let dynamicWalletAddress: string | null = null;
   let dynamicSetShowAuthFlow: ((show: boolean) => void) | null = null;
   let dynamicHandleLogOut: (() => Promise<void>) | null = null;
+  let dynContext: any = null;
 
   try {
     const dyn = useDynamicContext();
+    dynContext = dyn;
     if (dyn?.primaryWallet?.address) {
       dynamicWalletAddress = dyn.primaryWallet.address;
     }
@@ -75,6 +77,31 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
   } catch {
     // Dynamic context fallback
   }
+
+  const targetChainId = Number(process.env.NEXT_PUBLIC_EVM_CHAIN_ID || 4663);
+
+  // Auto-switch Dynamic connected wallet to Robinhood Mainnet if on testnet or another network
+  useEffect(() => {
+    if (!dynContext?.primaryWallet) return;
+    const wallet = dynContext.primaryWallet;
+    
+    const checkAndSwitchNetwork = async () => {
+      try {
+        const currentNetwork = wallet.network || wallet.chainId;
+        if (currentNetwork && Number(currentNetwork) !== targetChainId) {
+          if (typeof wallet.switchNetwork === 'function') {
+            await wallet.switchNetwork(targetChainId);
+          } else if (typeof wallet.connector?.switchNetwork === 'function') {
+            await wallet.connector.switchNetwork({ networkChainId: targetChainId });
+          }
+        }
+      } catch (err) {
+        console.warn('Network auto-switch check note:', err);
+      }
+    };
+
+    checkAndSwitchNetwork();
+  }, [dynContext?.primaryWallet, targetChainId]);
 
   // Restore fallback wallet from localStorage only if Dynamic is not managing session
   useEffect(() => {
@@ -94,7 +121,7 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
     getGameSettings().then(setGameSettings);
   }, []);
 
-  // Connect native browser fallback
+  // Connect native browser fallback with Robinhood Mainnet switch/add
   const connectNativeEVM = useCallback(async () => {
     if (dynamicSetShowAuthFlow) {
       dynamicSetShowAuthFlow(true);
@@ -103,9 +130,39 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
     try {
       setWalletError(null);
       if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const accounts = await (window as any).ethereum.request({
+        const eth = (window as any).ethereum;
+        const accounts = await eth.request({
           method: 'eth_requestAccounts',
         });
+        
+        // Ensure connected to Robinhood Mainnet (4663 / 0x1237)
+        const hexChainId = `0x${targetChainId.toString(16)}`;
+        try {
+          await eth.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: hexChainId }],
+          });
+        } catch (switchError: any) {
+          if (switchError?.code === 4902 || switchError?.data?.originalError?.code === 4902) {
+            await eth.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: hexChainId,
+                  chainName: process.env.NEXT_PUBLIC_EVM_CHAIN_NAME || 'Robinhood Chain',
+                  nativeCurrency: {
+                    name: 'Ether',
+                    symbol: process.env.NEXT_PUBLIC_EVM_NATIVE_SYMBOL || 'ETH',
+                    decimals: 18,
+                  },
+                  rpcUrls: getRobinhoodRpcList(),
+                  blockExplorerUrls: [process.env.NEXT_PUBLIC_EVM_EXPLORER_URL || 'https://robinhoodchain.blockscout.com'],
+                },
+              ],
+            });
+          }
+        }
+
         if (accounts && accounts[0]) {
           setNativeAddress(accounts[0]);
           localStorage.setItem('block_fuel_evm_wallet', accounts[0]);
@@ -119,7 +176,7 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
       console.warn('Native wallet connection note:', err);
       setWalletError(err.message || 'Connection cancelled');
     }
-  }, [dynamicSetShowAuthFlow]);
+  }, [dynamicSetShowAuthFlow, targetChainId]);
 
   // Handle logout
   const handleLogOut = useCallback(async () => {
@@ -150,7 +207,7 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
     [dynamicSetShowAuthFlow, connectNativeEVM]
   );
 
-  // Refetch token balance on Robinhood Chain
+  // Refetch token balance on Robinhood Chain Mainnet
   const refetchBalance = useCallback(async () => {
     if (!effectiveAddress) {
       setTokenBalance(0);
@@ -238,23 +295,24 @@ function DynamicWalletBridge({ children }: { children: React.ReactNode }) {
 
 export function DynamicProvider({ children }: { children: React.ReactNode }) {
   const dynamicEnvId = process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID;
+  const chainId = Number(process.env.NEXT_PUBLIC_EVM_CHAIN_ID || 4663);
 
-  // Custom EVM Network for Robinhood Mainnet
+  // Custom EVM Network configuration for Robinhood Mainnet
   const customEvmNetworks = [
     {
-      blockExplorerUrls: [process.env.NEXT_PUBLIC_EVM_EXPLORER_URL || 'https://explorer.robinhood-chain.com'],
-      chainId: Number(process.env.NEXT_PUBLIC_EVM_CHAIN_ID || 10001),
-      chainName: process.env.NEXT_PUBLIC_EVM_CHAIN_NAME || 'Robinhood Mainnet',
+      blockExplorerUrls: [process.env.NEXT_PUBLIC_EVM_EXPLORER_URL || 'https://robinhoodchain.blockscout.com'],
+      chainId: chainId,
+      chainName: process.env.NEXT_PUBLIC_EVM_CHAIN_NAME || 'Robinhood Chain',
       iconUrls: ['https://app.dynamic.xyz/assets/networks/eth.svg'],
-      name: 'Robinhood Mainnet',
+      name: 'Robinhood Chain',
       nativeCurrency: {
         decimals: 18,
-        name: process.env.NEXT_PUBLIC_EVM_NATIVE_SYMBOL || 'ROBIN',
-        symbol: process.env.NEXT_PUBLIC_EVM_NATIVE_SYMBOL || 'ROBIN',
+        name: 'Ether',
+        symbol: process.env.NEXT_PUBLIC_EVM_NATIVE_SYMBOL || 'ETH',
       },
-      networkId: Number(process.env.NEXT_PUBLIC_EVM_CHAIN_ID || 10001),
+      networkId: chainId,
       rpcUrls: getRobinhoodRpcList(),
-      vanityName: 'Robinhood Mainnet',
+      vanityName: 'Robinhood Chain',
     },
   ];
 
@@ -268,8 +326,14 @@ export function DynamicProvider({ children }: { children: React.ReactNode }) {
         environmentId: dynamicEnvId,
         walletConnectors: [EthereumWalletConnectors],
         initialAuthenticationMode: 'connect-only',
+        networkValidationMode: 'always',
         overrides: {
-          evmNetworks: customEvmNetworks,
+          evmNetworks: (dashboardNetworks) => [
+            ...customEvmNetworks,
+            ...(dashboardNetworks || []).filter(
+              (n: any) => n.chainId !== 46630 && n.chainId !== 10001 && n.chainId !== chainId
+            ),
+          ],
         },
       }}
     >

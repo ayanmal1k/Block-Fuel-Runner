@@ -6,7 +6,20 @@ import { fetchEvmTokenBalance } from '@/lib/evmBalance';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * FEATURE TOGGLE: Set to true when you are ready to accept withdrawal requests.
+ */
+const WITHDRAW_API_ENABLED = false;
+
 export async function POST(request: Request) {
+  // If withdrawals are disabled, return 404
+  if (!WITHDRAW_API_ENABLED) {
+    return NextResponse.json(
+      { error: 'Withdrawals are temporarily disabled or unavailable.' },
+      { status: 404 }
+    );
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
     const { userAddress, amountCoins, destinationAddress } = body;
@@ -54,8 +67,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'User record not found. Play games to bank Fuel Coins first.' }, { status: 404 });
       }
 
-      const userData = userSnap.data();
-      currentBankCoins = Number(userData.totalCoins || 0);
+      const userData: any = userSnap.data();
+      currentBankCoins = Number(userData?.totalCoins || 0);
 
       if (currentBankCoins < coinsToExchange) {
         return NextResponse.json(
@@ -66,7 +79,7 @@ export async function POST(request: Request) {
 
       // Deduct coins & update totalWithdrawn
       const remainingCoins = currentBankCoins - coinsToExchange;
-      const totalWithdrawn = Number(userData.totalWithdrawn || 0) + coinsToExchange;
+      const totalWithdrawn = Number(userData?.totalWithdrawn || 0) + coinsToExchange;
 
       await setDoc(
         userRef,
@@ -111,4 +124,8 @@ export async function POST(request: Request) {
     console.error('Withdrawal error:', error);
     return NextResponse.json({ error: error.message || 'Internal error processing withdrawal' }, { status: 500 });
   }
+}
+
+export async function GET(request: Request) {
+  return NextResponse.json({ error: 'Endpoint not found.' }, { status: 404 });
 }

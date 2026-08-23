@@ -5,13 +5,11 @@ import { DEFAULT_GAME_SETTINGS } from './gameSettings';
  * Public Robinhood Chain Mainnet RPC endpoints
  */
 export const ROBINHOOD_PUBLIC_RPCS: string[] = [
-  'https://rpc.robinhood-chain.com',
-  'https://mainnet.robinhood.com',
-  'https://rpc.robinhood.com',
-  'https://mainnet-rpc.robinhood-chain.com',
-  'https://robinhood-chain-rpc.publicnode.com',
+  'https://rpc.mainnet.chain.robinhood.com',
+  'https://rpc.mainnet.robinhood.com',
+  'https://mainnet.chain.robinhood.com',
+  'https://robinhoodchain-rpc.publicnode.com',
   'https://rpc.ankr.com/robinhood',
-  'https://rpc.robinhood-chain.org',
 ];
 
 export function getRobinhoodRpcList(customRpc?: string): string[] {

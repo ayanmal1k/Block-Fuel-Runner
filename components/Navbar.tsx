@@ -10,8 +10,6 @@ export function Navbar() {
 
   const navItems = [
     { label: '🎮 PLAY', href: '/' },
-    { label: '💰 WITHDRAW', href: '/withdraw' },
-    { label: '⚙️ ADMIN', href: '/admin' },
   ];
 
   return (

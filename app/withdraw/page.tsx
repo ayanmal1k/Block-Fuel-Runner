@@ -7,6 +7,11 @@ import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 import { db } from '@/lib/firebase';
 import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 
+/**
+ * FEATURE TOGGLE: Set to true when you are ready to re-enable the withdrawal portal.
+ */
+const WITHDRAWALS_ENABLED = false;
+
 interface WithdrawalRecord {
   id: string;
   amountCoins: number;
@@ -70,7 +75,9 @@ export default function WithdrawPage() {
   };
 
   useEffect(() => {
-    loadHistory();
+    if (WITHDRAWALS_ENABLED) {
+      loadHistory();
+    }
   }, [primaryWallet]);
 
   const handleWithdraw = async (e: React.FormEvent) => {
@@ -107,160 +114,219 @@ export default function WithdrawPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userAddress: primaryWallet.address,
-          destinationAddress: recipient || primaryWallet.address,
           amountCoins: coins,
+          destinationAddress: recipient,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Withdrawal failed');
+        throw new Error(data.error || 'Withdrawal transaction failed');
       }
 
-      setSuccessMessage(
-        `🎉 Successfully exchanged ${data.coinsDeducted.toLocaleString()} Fuel Coins for ${data.tokensPaid} ${tokenSymbol}! Tx: ${data.txHash.slice(0, 10)}...`
-      );
+      setSuccessMessage(`✅ Successfully converted ${coins.toLocaleString()} Fuel Coins for ${data.tokensPaid} ${tokenSymbol}!`);
       setWithdrawCoins('');
       await refreshBankCoins();
       await loadHistory();
     } catch (err: any) {
-      setErrorMessage(err.message || 'An error occurred during withdrawal.');
+      setErrorMessage(err.message || 'Error processing withdrawal request');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // When withdrawals are disabled, display Cyberpunk Not Available Screen
+  if (!WITHDRAWALS_ENABLED) {
+    return (
+      <div
+        className="cyber-grid-bg"
+        style={{
+          minHeight: 'calc(100vh - 65px)',
+          background: 'linear-gradient(145deg, #050b0e 0%, #0a1418 50%, #071013 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '30px 16px',
+          fontFamily: "'Press Start 2P', monospace",
+          color: '#e0f2f1',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '520px',
+            width: '100%',
+            background: 'rgba(10, 20, 24, 0.95)',
+            border: '1px solid rgba(255, 170, 0, 0.4)',
+            borderRadius: '16px',
+            padding: '36px 24px',
+            textAlign: 'center',
+            boxShadow: '0 0 35px rgba(255, 170, 0, 0.2)',
+          }}
+        >
+          <div style={{ fontSize: '42px', marginBottom: '16px', animation: 'neonPulse 1.5s infinite' }}>
+            🔒
+          </div>
+
+          <div
+            style={{
+              fontSize: '24px',
+              fontWeight: 900,
+              color: '#ffaa00',
+              textShadow: '0 0 15px rgba(255, 170, 0, 0.6)',
+              marginBottom: '14px',
+              letterSpacing: '1.5px',
+            }}
+          >
+            NOT AVAILABLE
+          </div>
+
+          <h1
+            style={{
+              fontSize: '12px',
+              color: '#00ff87',
+              marginBottom: '16px',
+              lineHeight: '1.6',
+              letterSpacing: '1px',
+            }}
+          >
+            WITHDRAWALS CURRENTLY OFFLINE
+          </h1>
+
+          <p
+            style={{
+              fontSize: '8px',
+              color: '#709ca6',
+              lineHeight: '1.9',
+              marginBottom: '28px',
+            }}
+          >
+            The withdrawal nexus is temporarily unavailable and undergoes scheduled network maintenance. Banked Fuel Coins remain secure on-chain.
+          </p>
+
+          <Link
+            href="/"
+            style={{
+              display: 'inline-block',
+              padding: '14px 24px',
+              background: 'linear-gradient(90deg, #00ff87, #00e5ff)',
+              color: '#060b0e',
+              textDecoration: 'none',
+              fontSize: '9px',
+              fontWeight: 900,
+              borderRadius: '8px',
+              boxShadow: '0 0 20px rgba(0, 255, 135, 0.4)',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+            }}
+          >
+            ⚡ RETURN TO GAME
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Full Active Withdrawal UI (preserved for easy toggle)
   return (
     <div
       className="cyber-grid-bg"
       style={{
         minHeight: 'calc(100vh - 65px)',
         background: 'linear-gradient(145deg, #050b0e 0%, #0a1418 50%, #071013 100%)',
-        padding: '32px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
+        padding: '30px 16px',
         fontFamily: "'Press Start 2P', monospace",
         color: '#e0f2f1',
       }}
     >
-      <div style={{ maxWidth: '780px', width: '100%' }}>
-        {/* Header Title */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '4px 14px',
-              borderRadius: '20px',
-              background: 'rgba(255, 215, 0, 0.1)',
-              border: '1px solid rgba(255, 215, 0, 0.4)',
-              marginBottom: '10px',
-            }}
-          >
-            <span>⚡</span>
-            <span style={{ fontSize: '8px', color: '#ffd700', letterSpacing: '2px' }}>
-              FUEL COIN EXCHANGER // ROBINHOOD CHAIN
-            </span>
-          </div>
-
+      <div style={{ maxWidth: '850px', margin: '0 auto' }}>
+        {/* Page Title Header */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <h1
             style={{
-              fontSize: 'clamp(20px, 3.5vw, 28px)',
+              fontSize: '18px',
               fontWeight: 900,
-              color: 'transparent',
-              background: 'linear-gradient(90deg, #ffd700 0%, #00ff87 50%, #00e5ff 100%)',
+              background: 'linear-gradient(90deg, #00ff87, #00e5ff)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              letterSpacing: '2px',
-              margin: '6px 0',
+              letterSpacing: '1.5px',
+              marginBottom: '8px',
             }}
           >
-            WITHDRAW REWARDS
+            💰 FUEL COINS VAULT &amp; WITHDRAWAL
           </h1>
-          <p style={{ color: '#709ca6', fontSize: '8px', lineHeight: '1.8' }}>
-            Convert your in-game Fuel Coins into real on-chain tokens on Robinhood Chain.
+          <p style={{ fontSize: '8px', color: '#709ca6', lineHeight: '1.8' }}>
+            Exchange banked Fuel Coins for {tokenSymbol} tokens on Robinhood Chain Mainnet
           </p>
         </div>
 
-        {/* Balance & Overview Cards */}
+        {/* Stats Grid */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '14px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '16px',
             marginBottom: '24px',
           }}
         >
+          {/* Banked Coins Card */}
           <div
             style={{
               background: 'rgba(10, 20, 24, 0.85)',
               border: '1px solid rgba(255, 215, 0, 0.35)',
-              borderRadius: '10px',
-              padding: '16px',
-              textAlign: 'center',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              borderRadius: '12px',
+              padding: '18px',
+              boxShadow: '0 0 20px rgba(255, 215, 0, 0.1)',
             }}
           >
-            <div style={{ fontSize: '7.5px', color: '#709ca6', marginBottom: '6px' }}>
-              BANKED FUEL COINS
+            <div style={{ fontSize: '8px', color: '#ffd700', marginBottom: '8px' }}>
+              ⚡ BANKED FUEL COINS
             </div>
-            <div style={{ fontSize: '20px', color: '#ffd700', fontWeight: 900 }}>
-              ⚡ {bankCoins.toLocaleString()}
+            <div style={{ fontSize: '20px', fontWeight: 900, color: '#ffd700' }}>
+              {bankCoins.toLocaleString()}
             </div>
-            <div style={{ fontSize: '7px', color: '#8aa5ad', marginTop: '6px' }}>
-              ≈ {(bankCoins / rate).toFixed(2)} {tokenSymbol}
+            <div style={{ fontSize: '7.5px', color: '#709ca6', marginTop: '6px' }}>
+              Earned from in-game collection
             </div>
           </div>
 
+          {/* Wallet Balance Card */}
           <div
             style={{
               background: 'rgba(10, 20, 24, 0.85)',
               border: '1px solid rgba(0, 255, 135, 0.35)',
-              borderRadius: '10px',
-              padding: '16px',
-              textAlign: 'center',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              borderRadius: '12px',
+              padding: '18px',
+              boxShadow: '0 0 20px rgba(0, 255, 135, 0.1)',
             }}
           >
-            <div style={{ fontSize: '7.5px', color: '#709ca6', marginBottom: '6px' }}>
-              EXCHANGE RATIO
+            <div style={{ fontSize: '8px', color: '#00ff87', marginBottom: '8px' }}>
+              💎 WALLET ON-CHAIN BALANCE
             </div>
-            <div style={{ fontSize: '15px', color: '#00ff87', fontWeight: 900 }}>
-              {rate} COINS = 1 {tokenSymbol}
+            <div style={{ fontSize: '20px', fontWeight: 900, color: '#00ff87' }}>
+              {tokenBalance.toFixed(4)} <span style={{ fontSize: '12px' }}>{tokenSymbol}</span>
             </div>
-            <div style={{ fontSize: '7px', color: '#8aa5ad', marginTop: '6px' }}>
-              Min: {minCoins.toLocaleString()} Coins
+            <div style={{ fontSize: '7.5px', color: '#709ca6', marginTop: '6px' }}>
+              {minTokenRequired > 0 ? `Required to play: ${minTokenRequired} ${tokenSymbol}` : 'Open Access'}
             </div>
           </div>
 
+          {/* Exchange Rate Card */}
           <div
             style={{
               background: 'rgba(10, 20, 24, 0.85)',
-              border: isEligible
-                ? '1px solid rgba(0, 229, 255, 0.35)'
-                : '1px solid rgba(255, 56, 56, 0.5)',
-              borderRadius: '10px',
-              padding: '16px',
-              textAlign: 'center',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(0, 229, 255, 0.35)',
+              borderRadius: '12px',
+              padding: '18px',
+              boxShadow: '0 0 20px rgba(0, 229, 255, 0.1)',
             }}
           >
-            <div style={{ fontSize: '7.5px', color: '#709ca6', marginBottom: '6px' }}>
-              WALLET ELIGIBILITY
+            <div style={{ fontSize: '8px', color: '#00e5ff', marginBottom: '8px' }}>
+              🔄 EXCHANGE RATE
             </div>
-            <div
-              style={{
-                fontSize: '14px',
-                color: isEligible ? '#00e5ff' : '#ff3838',
-                fontWeight: 900,
-              }}
-            >
-              {isEligible ? 'ACTIVE ✓' : 'LOCKED ✕'}
+            <div style={{ fontSize: '14px', fontWeight: 900, color: '#00e5ff' }}>
+              {rate} Coins = 1 {tokenSymbol}
             </div>
-            <div style={{ fontSize: '7px', color: '#8aa5ad', marginTop: '6px' }}>
-              Required: {minTokenRequired} {tokenSymbol} (Hold: {tokenBalance.toFixed(1)})
+            <div style={{ fontSize: '7.5px', color: '#709ca6', marginTop: '6px' }}>
+              Min withdrawal: {minCoins.toLocaleString()} coins
             </div>
           </div>
         </div>
@@ -268,12 +334,11 @@ export default function WithdrawPage() {
         {/* Withdrawal Form Card */}
         <div
           style={{
-            background: 'rgba(10, 20, 24, 0.9)',
-            border: '1px solid rgba(0, 255, 135, 0.35)',
+            background: 'rgba(10, 20, 24, 0.85)',
+            border: '1px solid rgba(0, 255, 135, 0.3)',
             borderRadius: '12px',
             padding: '24px',
-            marginBottom: '28px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+            marginBottom: '24px',
           }}
         >
           <div
@@ -282,17 +347,15 @@ export default function WithdrawPage() {
               color: '#00ff87',
               marginBottom: '16px',
               letterSpacing: '1px',
-              borderBottom: '1px solid rgba(0, 255, 135, 0.2)',
-              paddingBottom: '8px',
             }}
           >
-            ▶ INITIATE WITHDRAWAL
+            💸 SUBMIT WITHDRAWAL
           </div>
 
           {!primaryWallet?.address ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
-              <p style={{ fontSize: '9px', color: '#709ca6', marginBottom: '16px' }}>
-                Please connect your EVM / Robinhood Chain wallet to access withdrawals.
+              <p style={{ fontSize: '8.5px', color: '#709ca6', marginBottom: '16px' }}>
+                Connect your EVM wallet to access the withdrawal module.
               </p>
               <ConnectWalletButton />
             </div>
