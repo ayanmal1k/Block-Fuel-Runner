@@ -138,9 +138,9 @@ function createObstacle(x: number, speed: number): Obstacle {
     ? "aero"
     : Math.random() < 0.5 ? "hollow" : "mite";
   const sizes: Record<ObstacleKind, { width: number; height: number }> = {
-    aero:  { width: AERO_DRAW_W,  height: AERO_DRAW_H },
-    hollow:{ width: HOLLOW_DRAW_W, height: HOLLOW_DRAW_H },
-    mite:  { width: MITE_DRAW_W,  height: MITE_DRAW_H },
+    aero: { width: AERO_DRAW_W, height: AERO_DRAW_H },
+    hollow: { width: HOLLOW_DRAW_W, height: HOLLOW_DRAW_H },
+    mite: { width: MITE_DRAW_W, height: MITE_DRAW_H },
   };
   const { width, height } = sizes[kind];
   return {
@@ -186,13 +186,20 @@ function removeSpriteBackground(img: HTMLImageElement): HTMLCanvasElement {
   const bgR = data[0];
   const bgG = data[1];
   const bgB = data[2];
-  const toleranceSq = 50 * 50;
+  const toleranceSq = 55 * 55;
 
   for (let i = 0; i < data.length; i += 4) {
-    const dr = data[i] - bgR;
-    const dg = data[i + 1] - bgG;
-    const db = data[i + 2] - bgB;
-    if (dr * dr + dg * dg + db * db < toleranceSq) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    const dr = r - bgR;
+    const dg = g - bgG;
+    const db = b - bgB;
+    const isCornerMatch = (dr * dr + dg * dg + db * db < toleranceSq);
+    const isGreyBg = (Math.abs(r - g) < 18 && Math.abs(g - b) < 18 && Math.abs(r - b) < 18 && r > 115 && r < 195);
+
+    if (isCornerMatch || isGreyBg) {
       data[i + 3] = 0;
     }
   }
@@ -218,7 +225,7 @@ export default function MannyObstacleRun() {
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
-      try { await (screen.orientation as any)?.lock?.("landscape"); } catch {}
+      try { await (screen.orientation as any)?.lock?.("landscape"); } catch { }
     } else {
       await document.exitFullscreen();
     }
@@ -495,39 +502,26 @@ export default function MannyObstacleRun() {
         ctx.fillStyle = "#2a2a2a";
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       }
-
-      /* ── draw subtle grid overlay ── */
-      ctx.strokeStyle = "rgba(255,255,255,0.04)";
-      ctx.lineWidth = 1;
-      for (let gx = 0; gx < CANVAS_W; gx += 64) {
-        ctx.beginPath();
-        ctx.moveTo(gx, 0);
-        ctx.lineTo(gx, CANVAS_H);
-        ctx.stroke();
-      }
-      for (let gy = 0; gy < CANVAS_H; gy += 64) {
-        ctx.beginPath();
-        ctx.moveTo(0, gy);
-        ctx.lineTo(CANVAS_W, gy);
-        ctx.stroke();
-      }
-
-      /* ── draw ground ── */
+      /* ── draw custom walkway (recolored to match cyberpunk green/teal bg) ── */
       const groundGrad = ctx.createLinearGradient(0, GROUND_Y, 0, CANVAS_H);
-      groundGrad.addColorStop(0, "rgba(60, 50, 45, 0.9)");
-      groundGrad.addColorStop(1, "rgba(40, 35, 30, 0.95)");
+      groundGrad.addColorStop(0, "rgba(22, 38, 44, 0.92)");
+      groundGrad.addColorStop(0.3, "rgba(16, 28, 33, 0.95)");
+      groundGrad.addColorStop(1, "rgba(10, 18, 22, 0.98)");
       ctx.fillStyle = groundGrad;
       ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
 
-      // Ground line
-      ctx.strokeStyle = "rgba(255, 180, 50, 0.6)";
+      // Glowing cybernetic curb line
+      ctx.save();
+      ctx.strokeStyle = "rgba(46, 213, 115, 0.75)";
+      ctx.shadowColor = "rgba(46, 213, 115, 0.6)";
+      ctx.shadowBlur = 6;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, GROUND_Y);
       ctx.lineTo(CANVAS_W, GROUND_Y);
       ctx.stroke();
 
-      /* ── update logic (only when playing) ── */
+      ctx.restore();
       if (g.playing && !g.dead) {
         g.frame += dt;
         g.speed = OBSTACLE_SPEED_INITIAL + g.frame * OBSTACLE_SPEED_INCREMENT;
@@ -604,7 +598,7 @@ export default function MannyObstacleRun() {
         for (let i = g.obstacles.length - 1; i >= 0; i--) {
           const ob = g.obstacles[i];
           if (ob.destroyed) {
-            ob.destroyAnim+=dt;
+            ob.destroyAnim += dt;
             if (ob.destroyAnim > 20) {
               g.obstacles.splice(i, 1);
               continue;
