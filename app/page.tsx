@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import Link from "next/link";
+import { useWallet } from "@/components/DynamicProvider";
 
 /* ───────── sprite geometry ───────── */
 const IDLE_FW = 512;
@@ -189,6 +191,18 @@ export default function BlockFuelPunchAndRun() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [bgParticles, setBgParticles] = useState<React.ReactNode[]>([]);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [eligibilityWarning, setEligibilityWarning] = useState<string | null>(null);
+
+  const {
+    primaryWallet,
+    setShowAuthFlow,
+    isEligible,
+    minTokenRequired,
+    tokenBalance,
+    tokenSymbol,
+    bankCoins,
+    refreshBankCoins,
+  } = useWallet();
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -411,8 +425,40 @@ export default function BlockFuelPunchAndRun() {
     return () => canvas.removeEventListener("click", handleClick);
   }, []);
 
+  /* ── record game completion & bank coins in Firestore ── */
+  const handleRunEnd = useCallback(
+    (finalScore: number, finalCoins: number) => {
+      if (finalScore > highScore) {
+        setHighScore(finalScore);
+        localStorage.setItem("block-fuel-hi", String(finalScore));
+        localStorage.setItem("manny-hi", String(finalScore));
+      }
+      if (primaryWallet?.address) {
+        fetch("/api/game/end", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userAddress: primaryWallet.address,
+            score: finalScore,
+            coinsCollected: finalCoins,
+          }),
+        })
+          .then(() => refreshBankCoins())
+          .catch(console.warn);
+      }
+    },
+    [highScore, primaryWallet, refreshBankCoins]
+  );
+
   /* ── reset game ── */
   const resetGame = useCallback(() => {
+    if (minTokenRequired > 0 && !isEligible) {
+      setEligibilityWarning(
+        `MINIMUM BALANCE REQUIRED: You must hold at least ${minTokenRequired} ${tokenSymbol} on Robinhood Chain to run. Current balance: ${tokenBalance.toFixed(2)}.`
+      );
+      return;
+    }
+    setEligibilityWarning(null);
     const g = gs.current;
     g.charY = GROUND_Y - CHAR_DRAW_H;
     g.velY = 0;
@@ -441,7 +487,7 @@ export default function BlockFuelPunchAndRun() {
     g.dead = false;
     setScore(0);
     setGameState("playing");
-  }, []);
+  }, [minTokenRequired, isEligible, tokenSymbol, tokenBalance]);
 
   /* ── main game loop ── */
   useEffect(() => {
@@ -648,11 +694,7 @@ export default function BlockFuelPunchAndRun() {
                 g.dead = true;
                 g.playing = false;
                 setGameState("dead");
-                if (g.score > highScore) {
-                  setHighScore(g.score);
-                  localStorage.setItem("block-fuel-hi", String(g.score));
-                  localStorage.setItem("manny-hi", String(g.score));
-                }
+                handleRunEnd(g.score, g.coinCount);
               }
             }
           }
@@ -810,6 +852,7 @@ export default function BlockFuelPunchAndRun() {
             g.dead = true;
             g.playing = false;
             setGameState("dead");
+            handleRunEnd(g.score, g.coinCount);
             if (g.score > highScore) {
               setHighScore(g.score);
               localStorage.setItem("block-fuel-hi", String(g.score));
@@ -1107,7 +1150,7 @@ export default function BlockFuelPunchAndRun() {
 
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [highScore]);
+  }, [highScore, handleRunEnd]);
 
   /* ── start / restart on key press ── */
   useEffect(() => {
@@ -1333,7 +1376,7 @@ export default function BlockFuelPunchAndRun() {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              background: "rgba(5, 12, 15, 0.85)",
+              background: "rgba(5, 12, 15, 0.88)",
               borderRadius: isFullscreen ? "0px" : "12px",
               backdropFilter: "blur(6px)",
               padding: "20px",
@@ -1349,20 +1392,55 @@ export default function BlockFuelPunchAndRun() {
                 borderRadius: "30px",
                 background: "rgba(0, 255, 135, 0.12)",
                 border: "1px solid rgba(0, 255, 135, 0.4)",
-                marginBottom: "16px",
+                marginBottom: "14px",
               }}
             >
               <span style={{ fontSize: "14px" }}>⚡</span>
               <span style={{ fontSize: "9px", color: "#00ff87", letterSpacing: "2px" }}>
-                CYBER GRID INITIALIZED
+                CYBER GRID INITIALIZED // ROBINHOOD CHAIN
               </span>
             </div>
+
+            {/* Eligibility / Token Gating Warning */}
+            {eligibilityWarning && (
+              <div
+                style={{
+                  background: "rgba(255, 56, 56, 0.2)",
+                  border: "1px solid rgba(255, 56, 56, 0.6)",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  marginBottom: "14px",
+                  maxWidth: "520px",
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ color: "#ff7979", fontSize: "8px", lineHeight: "1.6", marginBottom: "8px" }}>
+                  ⚠️ {eligibilityWarning}
+                </div>
+                <button
+                  onClick={() => setShowAuthFlow(true)}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: "8px",
+                    fontFamily: "'Press Start 2P', monospace",
+                    background: "#00ff87",
+                    color: "#060b0e",
+                    fontWeight: "bold",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔗 CONNECT WALLET
+                </button>
+              </div>
+            )}
 
             <div
               style={{
                 fontSize: "14px",
                 color: "#00ff87",
-                marginBottom: "20px",
+                marginBottom: "18px",
                 animation: "neonPulse 1.8s ease-in-out infinite",
                 textAlign: "center",
                 letterSpacing: "1px",
@@ -1379,7 +1457,7 @@ export default function BlockFuelPunchAndRun() {
                 gap: "12px",
                 maxWidth: "520px",
                 width: "100%",
-                marginBottom: "18px",
+                marginBottom: "16px",
               }}
             >
               <div
@@ -1432,7 +1510,7 @@ export default function BlockFuelPunchAndRun() {
               }}
             >
               • Dodge Drones: <span style={{ color: "#00e5ff" }}>+1 Pt</span> &bull; Smash with Punch: <span style={{ color: "#00ff87" }}>+2 to +4 Pts</span><br />
-              • Collect <span style={{ color: "#ffd700" }}>⚡ Fuel Coins</span> to power up your punches!<br />
+              • Collect <span style={{ color: "#ffd700" }}>⚡ Fuel Coins</span> to power up punches &amp; withdraw to Robinhood Chain!<br />
               • Crystal Beam: <span style={{ color: "#ff3838" }}>-50 HP</span> &bull; Nano Dart: <span style={{ color: "#ff7979" }}>-25 HP</span> &bull; Auto HP Regen
             </div>
           </div>
@@ -1536,37 +1614,60 @@ export default function BlockFuelPunchAndRun() {
                   <div style={{ fontSize: "11px", color: "#00e5ff" }}>{highScore}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "6.5px", color: "#709ca6", marginBottom: "2px" }}>FUEL COINS</div>
-                  <div style={{ fontSize: "11px", color: "#ffd700" }}>⚡ {coinCount}</div>
+                  <div style={{ fontSize: "6.5px", color: "#709ca6", marginBottom: "2px" }}>RUN COINS</div>
+                  <div style={{ fontSize: "11px", color: "#ffd700" }}>⚡ +{coinCount}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: "6.5px", color: "#709ca6", marginBottom: "2px" }}>RANK</div>
-                  <div style={{ fontSize: "8.5px", color: runnerRank.color }}>{runnerRank.rank}</div>
+                  <div style={{ fontSize: "6.5px", color: "#709ca6", marginBottom: "2px" }}>BANK TOTAL</div>
+                  <div style={{ fontSize: "11px", color: "#00ff87" }}>🏦 {bankCoins.toLocaleString()}</div>
                 </div>
               </div>
             </div>
 
-            {/* Restart Prompt Button */}
-            <button
-              onClick={resetGame}
-              style={{
-                padding: "12px 28px",
-                fontSize: "10px",
-                fontFamily: "'Press Start 2P', monospace",
-                background: "linear-gradient(90deg, #00ff87, #00e5ff)",
-                color: "#050b0e",
-                fontWeight: "bold",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                boxShadow: "0 0 25px rgba(0, 255, 135, 0.5)",
-                animation: "neonPulse 1.5s ease-in-out infinite",
-              }}
-            >
-              ↻ REBOOT &amp; RETRY
-            </button>
+            {/* Actions: Reboot / Withdraw */}
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+              <button
+                onClick={resetGame}
+                style={{
+                  padding: "12px 24px",
+                  fontSize: "9px",
+                  fontFamily: "'Press Start 2P', monospace",
+                  background: "linear-gradient(90deg, #00ff87, #00e5ff)",
+                  color: "#050b0e",
+                  fontWeight: "bold",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  boxShadow: "0 0 25px rgba(0, 255, 135, 0.5)",
+                  animation: "neonPulse 1.5s ease-in-out infinite",
+                }}
+              >
+                ↻ RETRY RUN
+              </button>
+
+              <Link
+                href="/withdraw"
+                style={{
+                  padding: "12px 24px",
+                  fontSize: "9px",
+                  fontFamily: "'Press Start 2P', monospace",
+                  background: "rgba(255, 215, 0, 0.15)",
+                  border: "1px solid rgba(255, 215, 0, 0.5)",
+                  color: "#ffd700",
+                  fontWeight: "bold",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  boxShadow: "0 0 15px rgba(255, 215, 0, 0.3)",
+                }}
+              >
+                💰 WITHDRAW
+              </Link>
+            </div>
             <div style={{ fontSize: "7px", color: "rgba(224, 242, 241, 0.4)", marginTop: "10px" }}>
-              (Or press any key on keyboard)
+              (Or press any key on keyboard to retry)
             </div>
           </div>
         )}

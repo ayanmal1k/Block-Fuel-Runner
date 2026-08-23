@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Press_Start_2P } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { DynamicProvider } from '@/components/DynamicProvider'
+import { Navbar } from '@/components/Navbar'
 import './globals.css'
 
 const pressStart2P = Press_Start_2P({
@@ -50,7 +52,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
       <body className={`${pressStart2P.className} antialiased bg-[#060b0e] text-[#e0f2f1]`}>
-        {children}
+        <DynamicProvider>
+          <Navbar />
+          {children}
+        </DynamicProvider>
         <Analytics />
       </body>
     </html>
