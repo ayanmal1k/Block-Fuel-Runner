@@ -32,11 +32,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/coin.png', sizes: '32x32', type: 'image/png' },
+      { url: '/face.png', type: 'image/png' },
     ],
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
+    shortcut: '/face.png',
+    apple: '/face.png',
   },
 }
 
@@ -48,8 +47,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={pressStart2P.variable}>
       <head>
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/icon.svg" />
+        <link rel="icon" href="/face.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/face.png" />
       </head>
       <body className={`${pressStart2P.className} antialiased bg-[#060b0e] text-[#e0f2f1]`}>
         <DynamicProvider>

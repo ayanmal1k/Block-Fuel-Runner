@@ -462,6 +462,14 @@ export default function BlockFuelPunchAndRun() {
 
   /* ── reset game & initiate cryptographic HMAC session ── */
   const resetGame = useCallback(() => {
+    if (!primaryWallet?.address) {
+      setEligibilityWarning(
+        "WALLET REQUIRED: Please connect your Web3 wallet to start playing!"
+      );
+      setShowAuthFlow(true);
+      return;
+    }
+
     if (minTokenRequired > 0 && !isEligible) {
       setEligibilityWarning(
         `MINIMUM BALANCE REQUIRED: You must hold at least ${minTokenRequired} ${tokenSymbol} on Robinhood Chain to run. Current balance: ${tokenBalance.toFixed(2)}.`
@@ -514,7 +522,7 @@ export default function BlockFuelPunchAndRun() {
     g.dead = false;
     setScore(0);
     setGameState("playing");
-  }, [minTokenRequired, isEligible, tokenSymbol, tokenBalance, primaryWallet]);
+  }, [minTokenRequired, isEligible, tokenSymbol, tokenBalance, primaryWallet, setShowAuthFlow]);
 
   /* ── main game loop ── */
   useEffect(() => {
@@ -1179,6 +1187,16 @@ export default function BlockFuelPunchAndRun() {
     return () => cancelAnimationFrame(animId);
   }, [highScore, handleRunEnd]);
 
+  /* ── auto disconnect watcher: halt active game if wallet disconnects ── */
+  useEffect(() => {
+    if (!primaryWallet?.address && gameState === "playing") {
+      const g = gs.current;
+      g.playing = false;
+      setGameState("idle");
+      setEligibilityWarning("WALLET DISCONNECTED: Reconnect your wallet to play.");
+    }
+  }, [primaryWallet?.address, gameState]);
+
   /* ── start / restart on key press ── */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1187,12 +1205,19 @@ export default function BlockFuelPunchAndRun() {
       }
       if (gameState === "idle" || gameState === "dead") {
         e.preventDefault();
+        if (!primaryWallet?.address) {
+          setEligibilityWarning(
+            "WALLET REQUIRED: Please connect your Web3 wallet to start playing!"
+          );
+          setShowAuthFlow(true);
+          return;
+        }
         resetGame();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [gameState, resetGame]);
+  }, [gameState, resetGame, primaryWallet, setShowAuthFlow]);
 
   const runnerRank = getRunnerRank(score);
 
@@ -1373,6 +1398,13 @@ export default function BlockFuelPunchAndRun() {
         }}
         onTouchStart={() => {
           if (gameState === "idle" || gameState === "dead") {
+            if (!primaryWallet?.address) {
+              setEligibilityWarning(
+                "WALLET REQUIRED: Please connect your Web3 wallet to start playing!"
+              );
+              setShowAuthFlow(true);
+              return;
+            }
             resetGame();
           }
         }}
@@ -1444,37 +1476,103 @@ export default function BlockFuelPunchAndRun() {
                 <div style={{ color: "#ff7979", fontSize: "8px", lineHeight: "1.6", marginBottom: "8px" }}>
                   ⚠️ {eligibilityWarning}
                 </div>
-                <button
-                  onClick={() => setShowAuthFlow(true)}
-                  style={{
-                    padding: "6px 14px",
-                    fontSize: "8px",
-                    fontFamily: "'Press Start 2P', monospace",
-                    background: "#00ff87",
-                    color: "#060b0e",
-                    fontWeight: "bold",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  🔗 CONNECT WALLET
-                </button>
+                {!primaryWallet?.address && (
+                  <button
+                    onClick={() => setShowAuthFlow(true)}
+                    style={{
+                      padding: "6px 14px",
+                      fontSize: "8px",
+                      fontFamily: "'Press Start 2P', monospace",
+                      background: "#00ff87",
+                      color: "#060b0e",
+                      fontWeight: "bold",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🔗 CONNECT WALLET
+                  </button>
+                )}
               </div>
             )}
 
-            <div
-              style={{
-                fontSize: "14px",
-                color: "#00ff87",
-                marginBottom: "18px",
-                animation: "neonPulse 1.8s ease-in-out infinite",
-                textAlign: "center",
-                letterSpacing: "1px",
-              }}
-            >
-              ▶ PRESS ANY KEY OR TAP TO RUN ◀
-            </div>
+            {/* Main Action: Connect Wallet vs Start Run */}
+            {!primaryWallet?.address ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "18px",
+                  textAlign: "center",
+                }}
+              >
+                <button
+                  onClick={() => setShowAuthFlow(true)}
+                  style={{
+                    padding: "14px 28px",
+                    fontSize: "10px",
+                    fontFamily: "'Press Start 2P', monospace",
+                    background: "linear-gradient(90deg, #00ff87, #00e5ff)",
+                    color: "#050b0e",
+                    fontWeight: "bold",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    boxShadow: "0 0 25px rgba(0, 255, 135, 0.6)",
+                    animation: "neonPulse 1.8s ease-in-out infinite",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  🔗 CONNECT WALLET TO PLAY
+                </button>
+                <div style={{ fontSize: "7.5px", color: "#ff7979", letterSpacing: "0.5px" }}>
+                  🔒 Wallet connection required to access cyber grid &amp; harvest fuel coins
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "18px",
+                  textAlign: "center",
+                }}
+              >
+                <button
+                  onClick={resetGame}
+                  style={{
+                    padding: "12px 28px",
+                    fontSize: "10px",
+                    fontFamily: "'Press Start 2P', monospace",
+                    background: "linear-gradient(90deg, #00ff87, #00e5ff)",
+                    color: "#050b0e",
+                    fontWeight: "bold",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    boxShadow: "0 0 20px rgba(0, 255, 135, 0.5)",
+                    animation: "neonPulse 1.8s ease-in-out infinite",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  ▶ START RUN ◀
+                </button>
+                <div
+                  style={{
+                    fontSize: "8px",
+                    color: "#00ff87",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  (Or press any key / tap screen to run)
+                </div>
+              </div>
+            )}
 
             {/* Tactical Control Badges */}
             <div
@@ -1651,29 +1749,50 @@ export default function BlockFuelPunchAndRun() {
               </div>
             </div>
 
-            {/* Actions: Retry Run */}
+            {/* Actions: Retry Run or Connect Wallet */}
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
-              <button
-                onClick={resetGame}
-                style={{
-                  padding: "12px 28px",
-                  fontSize: "9px",
-                  fontFamily: "'Press Start 2P', monospace",
-                  background: "linear-gradient(90deg, #00ff87, #00e5ff)",
-                  color: "#050b0e",
-                  fontWeight: "bold",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  boxShadow: "0 0 25px rgba(0, 255, 135, 0.5)",
-                  animation: "neonPulse 1.5s ease-in-out infinite",
-                }}
-              >
-                ↻ RETRY RUN
-              </button>
+              {!primaryWallet?.address ? (
+                <button
+                  onClick={() => setShowAuthFlow(true)}
+                  style={{
+                    padding: "12px 28px",
+                    fontSize: "9px",
+                    fontFamily: "'Press Start 2P', monospace",
+                    background: "linear-gradient(90deg, #00ff87, #00e5ff)",
+                    color: "#050b0e",
+                    fontWeight: "bold",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    boxShadow: "0 0 25px rgba(0, 255, 135, 0.5)",
+                    animation: "neonPulse 1.5s ease-in-out infinite",
+                  }}
+                >
+                  🔗 CONNECT WALLET TO RETRY
+                </button>
+              ) : (
+                <button
+                  onClick={resetGame}
+                  style={{
+                    padding: "12px 28px",
+                    fontSize: "9px",
+                    fontFamily: "'Press Start 2P', monospace",
+                    background: "linear-gradient(90deg, #00ff87, #00e5ff)",
+                    color: "#050b0e",
+                    fontWeight: "bold",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    boxShadow: "0 0 25px rgba(0, 255, 135, 0.5)",
+                    animation: "neonPulse 1.5s ease-in-out infinite",
+                  }}
+                >
+                  ↻ RETRY RUN
+                </button>
+              )}
             </div>
             <div style={{ fontSize: "7px", color: "rgba(224, 242, 241, 0.4)", marginTop: "10px" }}>
-              (Or press any key on keyboard to retry)
+              {primaryWallet?.address ? "(Or press any key on keyboard to retry)" : "(Connect wallet to save scores and coins)"}
             </div>
           </div>
         )}

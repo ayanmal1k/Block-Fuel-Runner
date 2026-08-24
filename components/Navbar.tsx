@@ -43,11 +43,23 @@ export function Navbar() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '10px',
             textDecoration: 'none',
           }}
         >
-          <span style={{ fontSize: '16px', animation: 'neonPulse 2s infinite' }}>⚡</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/face.png"
+            alt="Block Fuel Face"
+            style={{
+              width: '24px',
+              height: '24px',
+              objectFit: 'contain',
+              borderRadius: '4px',
+              filter: 'drop-shadow(0 0 6px rgba(0, 255, 135, 0.6))',
+              imageRendering: 'pixelated',
+            }}
+          />
           <span
             style={{
               fontSize: '11px',
