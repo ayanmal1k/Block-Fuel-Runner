@@ -1804,10 +1804,11 @@ export default function BlockFuelPunchAndRun() {
             <button
               onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); keys.current["d"] = true; }}
               onTouchEnd={(e) => { e.preventDefault(); keys.current["d"] = false; }}
+              onTouchCancel={(e) => { e.preventDefault(); keys.current["d"] = false; }}
               style={{
                 position: "absolute",
-                left: "12px",
-                bottom: "16px",
+                left: "calc(clamp(36px, 6vw, 64px) + env(safe-area-inset-left, 0px))",
+                bottom: "calc(22px + env(safe-area-inset-bottom, 0px))",
                 width: "70px",
                 height: "70px",
                 borderRadius: "50%",
@@ -1837,10 +1838,11 @@ export default function BlockFuelPunchAndRun() {
             <button
               onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); keys.current["arrowup"] = true; }}
               onTouchEnd={(e) => { e.preventDefault(); keys.current["arrowup"] = false; }}
+              onTouchCancel={(e) => { e.preventDefault(); keys.current["arrowup"] = false; }}
               style={{
                 position: "absolute",
-                right: "14px",
-                bottom: "94px",
+                right: "calc(clamp(36px, 6vw, 64px) + env(safe-area-inset-right, 0px))",
+                bottom: "calc(102px + env(safe-area-inset-bottom, 0px))",
                 width: "66px",
                 height: "66px",
                 borderRadius: "50%",
@@ -1870,10 +1872,11 @@ export default function BlockFuelPunchAndRun() {
             <button
               onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); keys.current["arrowdown"] = true; }}
               onTouchEnd={(e) => { e.preventDefault(); keys.current["arrowdown"] = false; }}
+              onTouchCancel={(e) => { e.preventDefault(); keys.current["arrowdown"] = false; }}
               style={{
                 position: "absolute",
-                right: "14px",
-                bottom: "16px",
+                right: "calc(clamp(36px, 6vw, 64px) + env(safe-area-inset-right, 0px))",
+                bottom: "calc(22px + env(safe-area-inset-bottom, 0px))",
                 width: "66px",
                 height: "66px",
                 borderRadius: "50%",
