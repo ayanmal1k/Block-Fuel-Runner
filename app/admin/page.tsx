@@ -400,6 +400,37 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Section: Network & Token Settings */}
+              <div style={{ borderBottom: '1px solid rgba(0, 255, 135, 0.2)', paddingBottom: '20px' }}>
+                <div style={{ fontSize: '10px', color: '#00e5ff', marginBottom: '14px', letterSpacing: '1px' }}>
+                  🔗 NETWORK & TOKEN SETTINGS
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '8px', color: '#709ca6', marginBottom: '6px' }}>
+                    TOKEN CONTRACT ADDRESS
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.tokenAddress}
+                    onChange={(e) => setSettings({ ...settings, tokenAddress: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: 'rgba(6, 15, 19, 0.9)',
+                      border: '1px solid rgba(0, 229, 255, 0.3)',
+                      borderRadius: '6px',
+                      color: '#00e5ff',
+                      fontSize: '9px',
+                      fontFamily: "'Press Start 2P', monospace",
+                    }}
+                  />
+                  <span style={{ fontSize: '6.5px', color: '#8aa5ad', marginTop: '6px', display: 'block' }}>
+                    The ERC-20 contract address used for balance checks.
+                  </span>
+                </div>
+              </div>
+
               {/* Section: Leaderboard & Competition Settings */}
               <div>
                 <div style={{ fontSize: '10px', color: '#ffd700', marginBottom: '14px', letterSpacing: '1px' }}>
