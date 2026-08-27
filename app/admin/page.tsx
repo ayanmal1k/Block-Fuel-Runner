@@ -598,8 +598,30 @@ export default function AdminPage() {
                         <td style={{ padding: '8px', color: idx === 0 ? '#ffd700' : idx === 1 ? '#00e5ff' : '#709ca6', fontWeight: 'bold' }}>
                           #{idx + 1} {idx === 0 ? '👑' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''}
                         </td>
-                        <td style={{ padding: '8px', color: '#00e5ff' }}>
-                          {p.address ? `${p.address.slice(0, 6)}...${p.address.slice(-4)}` : p.id}
+                        <td style={{ padding: '8px', color: '#00e5ff', fontFamily: 'monospace', fontSize: '8px', wordBreak: 'break-all' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ userSelect: 'all' }}>{p.address || p.id}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(p.address || p.id);
+                                alert('Wallet address copied to clipboard!');
+                              }}
+                              title="Copy full address"
+                              style={{
+                                background: 'rgba(0, 229, 255, 0.15)',
+                                border: '1px solid rgba(0, 229, 255, 0.4)',
+                                color: '#00e5ff',
+                                borderRadius: '4px',
+                                padding: '2px 5px',
+                                fontSize: '6.5px',
+                                cursor: 'pointer',
+                                fontFamily: "'Press Start 2P', monospace",
+                              }}
+                            >
+                              📋 COPY
+                            </button>
+                          </div>
                         </td>
                         <td style={{ padding: '8px', color: '#00ff87', fontWeight: 'bold' }}>
                           {p.highScore || 0}
