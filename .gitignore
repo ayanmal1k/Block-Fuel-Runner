@@ -16,3 +16,4 @@ node_modules
 .DS_Store
 RWD-GAME-main/
 out/
+config.bat

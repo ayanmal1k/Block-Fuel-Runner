@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@/components/DynamicProvider";
+import { Leaderboard } from "@/components/Leaderboard";
 
 /* ───────── sprite geometry ───────── */
 const IDLE_FW = 512;
@@ -193,6 +194,7 @@ export default function BlockFuelPunchAndRun() {
   const [bgParticles, setBgParticles] = useState<React.ReactNode[]>([]);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [eligibilityWarning, setEligibilityWarning] = useState<string | null>(null);
+  const [leaderboardTrigger, setLeaderboardTrigger] = useState(0);
 
   const {
     primaryWallet,
@@ -452,6 +454,7 @@ export default function BlockFuelPunchAndRun() {
             if (!res.ok) {
               return res.json().then((d) => console.warn("Game end verification note:", d.error));
             }
+            setLeaderboardTrigger((prev) => prev + 1);
             return refreshBankCoins();
           })
           .catch(console.warn);
@@ -2023,6 +2026,11 @@ export default function BlockFuelPunchAndRun() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ──────── GLOBAL LEADERBOARD (ENABLED VIA ADMIN) ──────── */}
+      {!isFullscreen && (
+        <Leaderboard refreshTrigger={leaderboardTrigger} />
       )}
     </div>
   );
